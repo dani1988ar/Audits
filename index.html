@@ -1,0 +1,3048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PM Audit">
+<meta name="theme-color" content="#1e2744">
+<link rel="manifest" href='data:application/manifest+json,{"name":"PM Audit","short_name":"PM Audit","display":"standalone","background_color":"#0f1117","theme_color":"#1e2744","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔧</text></svg>","sizes":"any","type":"image/svg+xml"}]}'>
+<title>PM Audit</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--surf:#1a1d27;--surf2:#22263a;--bdr:#2e3350;--txt:#e8eaf0;--muted:#8890aa;
+  --red:#ef4444;--blu:#3b82f6;--ind:#6366f1;--grn:#10b981;--ylw:#fbbf24;--cya:#38bdf8;--orng:#f59e0b}
+body{background:var(--bg);color:var(--txt);font-family:"Segoe UI",system-ui,sans-serif;font-size:14px;min-height:100vh}
+
+/* ── Login screen ── */
+.login-screen{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px 40px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.login-box{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.login-logo{font-size:48px;text-align:center;margin-bottom:6px}
+.login-app-name{font-size:26px;font-weight:800;text-align:center;color:#fff;letter-spacing:-.3px;margin-bottom:2px}
+.login-company{font-size:12px;color:var(--muted);text-align:center;margin-bottom:28px;letter-spacing:.3px;text-transform:uppercase}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.login-error{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fca5a5;border-radius:7px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+.login-btn{width:100%;padding:12px;font-size:15px;font-weight:700;border-radius:8px;letter-spacing:.2px;margin-top:4px}
+/* ── Header user badge ── */
+.hdr-user{display:flex;align-items:center;gap:8px}
+.hdr-user-info{display:flex;flex-direction:column;gap:1px}
+.hdr-user-name{font-size:13px;font-weight:700;color:#fff}
+.hdr-user-meta{font-size:10px;color:var(--muted)}
+.hdr-switch{background:transparent;border:1px solid var(--bdr);color:var(--muted);border-radius:5px;padding:3px 9px;font-size:10px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.hdr-switch:hover{border-color:var(--ind);color:#a5b4fc}
+/* ── Onboarding ── */
+.onboard-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:8000;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.onboard-box{background:var(--surf);border:1px solid rgba(99,102,241,.5);border-radius:16px;padding:32px;width:100%;max-width:500px;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.onboard-steps{display:flex;flex-direction:column;gap:10px;margin:20px 0}
+.onboard-step{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:var(--surf2);border-radius:8px;border:1px solid var(--bdr)}
+.onboard-step-num{background:var(--ind);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.onboard-step-txt{font-size:13px;line-height:1.5}
+.onboard-progress-bar-wrap{background:var(--surf2);border-radius:20px;height:8px;overflow:hidden;margin:12px 0}
+.onboard-progress-bar{height:100%;background:linear-gradient(90deg,var(--ind),#06b6d4);border-radius:20px;transition:width .3s;width:0%}
+.onboard-file-name{font-size:11px;color:var(--muted);font-family:monospace;margin-top:4px;min-height:16px;word-break:break-all}
+.onboard-done-icon{font-size:56px;text-align:center;margin-bottom:10px}
+.onboard-done-count{font-size:36px;font-weight:800;color:#6ee7b7;text-align:center}
+
+/* header */
+.hdr{background:linear-gradient(135deg,#1e2235,#0f1117);border-bottom:1px solid var(--bdr);padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.hdr h1{font-size:18px;font-weight:700;color:#fff;flex-shrink:0}
+.hdr-spacer{flex:1}
+.hdr-field{display:flex;flex-direction:column;gap:3px}
+.hdr-field label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.hdr-field input,.hdr-field select{background:var(--surf2);border:1px solid var(--bdr);color:var(--txt);border-radius:6px;padding:7px 12px;font-size:13px;outline:none;font-family:inherit;min-width:140px}
+.hdr-field input:focus,.hdr-field select:focus{border-color:var(--ind)}
+
+/* tabs */
+.tab-bar{display:flex;gap:2px;padding:0 24px;background:#13161f;border-bottom:1px solid var(--bdr)}
+.tab-btn{background:none;border:none;color:var(--muted);padding:12px 20px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:7px;transition:all .12s;white-space:nowrap;font-family:inherit}
+.tab-btn:hover{color:var(--txt)}
+.tab-btn.active{color:#fff;border-bottom-color:var(--ind)}
+.tab-btn .count{background:var(--surf2);border:1px solid var(--bdr);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:600;color:var(--muted)}
+.tab-btn.active .count{background:rgba(99,102,241,.18);border-color:var(--ind);color:#a5b4fc}
+
+.main{padding:20px 24px;max-width:1400px;margin:0 auto}
+.section{display:none}
+.section.active{display:block}
+
+/* cards */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin-bottom:16px}
+.card-t{font-size:13px;font-weight:700;margin-bottom:4px}
+.card-s{font-size:11px;color:var(--muted);margin-bottom:12px}
+
+/* section labels */
+.sec-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr)}
+
+/* form */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field.full{grid-column:1/-1}
+.form-field label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.form-input,.form-textarea,.form-select{background:var(--surf2);border:1px solid var(--bdr);color:var(--txt);border-radius:6px;padding:10px 12px;font-size:13px;outline:none;font-family:inherit;width:100%}
+.form-input:focus,.form-textarea:focus,.form-select:focus{border-color:var(--ind)}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--muted)}
+.form-textarea{min-height:70px;resize:vertical;line-height:1.5}
+.form-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:12px;border-top:1px solid var(--bdr)}
+
+/* buttons */
+.btn{background:var(--ind);color:#fff;border:none;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .12s;white-space:nowrap}
+.btn:hover{background:#4f46e5}
+.btn-green{background:var(--grn)}
+.btn-green:hover{background:#059669}
+.btn-secondary{background:transparent;border:1px solid var(--bdr);color:var(--txt)}
+.btn-secondary:hover{border-color:var(--ind);color:#a5b4fc}
+.btn-danger{background:transparent;border:1px solid var(--red);color:#fca5a5}
+.btn-danger:hover{background:rgba(239,68,68,.1)}
+.btn-small{padding:5px 12px;font-size:11px;font-weight:600}
+.btn-xs{padding:3px 9px;font-size:10px;font-weight:600}
+
+/* PM list table */
+.entries-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{background:var(--surf2)}
+thead th{text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--bdr);cursor:pointer}
+tbody tr:hover{background:rgba(99,102,241,.06)}
+tbody tr.row-selected{background:rgba(99,102,241,.12)!important;border-left:2px solid var(--ind)}
+tbody td{padding:8px 10px;vertical-align:top}
+
+/* info grid for PM info */
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:14px}
+.info-item{background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:8px 12px}
+.info-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.info-val{font-size:12px;color:var(--txt);font-weight:600;word-break:break-word}
+
+/* checklist */
+.op-section{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;margin-bottom:10px;overflow:hidden;transition:border-color .15s}
+.op-section.op-ok{border-color:rgba(16,185,129,.5)}
+.op-section.op-nok{border-color:rgba(239,68,68,.45)}
+.op-section.op-needs-verdict{border-color:rgba(251,191,36,.8)!important;box-shadow:0 0 0 2px rgba(251,191,36,.2)}
+.op-hdr{background:var(--surf);padding:9px 14px;font-weight:700;font-size:12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:8px;flex-wrap:wrap;transition:background .15s}
+.op-section.op-ok .op-hdr{background:rgba(16,185,129,.08);border-bottom-color:rgba(16,185,129,.2)}
+.op-section.op-nok .op-hdr{background:rgba(239,68,68,.06);border-bottom-color:rgba(239,68,68,.2)}
+.op-num-badge{font-family:monospace;font-size:11px;color:#a5b4fc;background:rgba(99,102,241,.15);padding:2px 8px;border-radius:4px;flex-shrink:0}
+.op-title-text{flex:1;min-width:0}
+.op-verdict{display:flex;gap:5px;margin-left:auto;flex-shrink:0}
+.btn-ok,.btn-nok{padding:4px 14px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--bdr);color:var(--muted);background:var(--surf2);transition:all .12s;font-family:inherit;white-space:nowrap}
+.btn-ok:hover{border-color:var(--grn);color:var(--grn)}
+.btn-nok:hover{border-color:var(--red);color:#fca5a5}
+.btn-ok.active{background:var(--grn);color:#fff;border-color:var(--grn)}
+.btn-nok.active{background:var(--red);color:#fff;border-color:var(--red)}
+.op-complete{font-size:10px;color:var(--grn);flex-shrink:0}
+.op-items{padding:8px}
+/* Step items — collapsed by default, only text line visible */
+.cl-item{background:var(--surf);border:1px solid var(--bdr);border-radius:6px;margin-bottom:4px;transition:border-color .12s;overflow:hidden}
+.cl-item.checked{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.03)}
+.cl-item-hdr{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;user-select:none}
+.cl-item-hdr:hover{background:rgba(99,102,241,.04)}
+.cl-item-hdr input[type=checkbox]{width:15px;height:15px;accent-color:var(--grn);flex-shrink:0;cursor:pointer}
+.step-num{font-weight:800;color:var(--ind);font-size:12px;flex-shrink:0;min-width:20px}
+.step-txt{font-size:12px;line-height:1.4;flex:1}
+.step-txt.done{text-decoration:line-through;color:var(--muted)}
+.step-arrow{font-size:9px;color:var(--muted);flex-shrink:0;transition:transform .15s;padding-left:4px}
+.cl-item.expanded .step-arrow{transform:rotate(180deg)}
+/* Expanded body — hidden by default */
+.cl-item-body{display:none;padding:0 10px 10px 10px;border-top:1px solid var(--bdr);margin-top:0}
+.cl-item.expanded .cl-item-body{display:block}
+.step-notes{padding:6px 0 4px 2px;font-size:11px;color:var(--muted);font-style:italic;line-height:1.5}
+.step-note-line::before{content:"• "}
+.step-extra{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.step-img-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
+.img-thumb{width:38px;height:38px;object-fit:cover;border-radius:5px;border:1px solid var(--bdr);cursor:pointer;transition:border-color .12s;vertical-align:middle}
+.img-thumb:hover{border-color:var(--ind)}
+.img-remove{font-size:10px;background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:1px 6px;cursor:pointer;font-family:inherit}
+.img-remove:hover{background:rgba(239,68,68,.3)}
+
+/* image attach row */
+.img-attach-row{background:var(--surf2);border:1px dashed var(--bdr);border-radius:8px;padding:10px 12px;margin-top:8px}
+.img-attach-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px}
+.img-attach-btns{display:flex;gap:8px;flex-wrap:wrap}
+.img-preview-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.img-preview-item{position:relative;display:inline-block}
+.img-preview-item img{width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--bdr);cursor:pointer}
+.img-preview-item .rm-btn{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+
+/* badges */
+.status-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.badge-draft{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+.badge-submitted{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3)}
+.badge-partial{background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3)}
+
+/* folder card */
+.folder-card{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.folder-name{font-family:monospace;color:#cbd5e1;font-size:13px;font-weight:600}
+.folder-none{color:var(--muted);font-style:italic;font-size:12px}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;width:100%;max-width:900px;display:flex;flex-direction:column;max-height:90vh}
+.modal-hdr{padding:14px 20px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-hdr h3{font-size:15px;font-weight:700}
+.modal-body{padding:16px 20px;overflow-y:auto;flex:1}
+.modal-foot{display:flex;justify-content:space-between;gap:10px;padding:14px 20px;border-top:1px solid var(--bdr);flex-shrink:0}
+
+/* camera */
+.cam-stage{display:flex;flex-direction:column;align-items:center;gap:10px}
+.cam-stage video{width:100%;max-height:55vh;border-radius:8px;background:#000;display:block}
+.cam-stage canvas{display:none}
+.cam-preview{display:flex;flex-direction:column;align-items:center;gap:10px}
+.cam-preview img{width:100%;max-height:55vh;object-fit:contain;border-radius:8px;background:#000;display:block}
+.cam-status{text-align:center;font-size:12px;color:var(--muted);min-height:18px}
+.img-viewer{display:flex;justify-content:center;align-items:center}
+.img-viewer img{max-width:100%;max-height:80vh;object-fit:contain;border-radius:8px}
+
+/* export list */
+.audit-card{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.audit-card-info{flex:1;min-width:0}
+.audit-card-title{font-weight:700;font-size:13px;color:#cbd5e1;margin-bottom:3px}
+.audit-card-meta{font-size:11px;color:var(--muted)}
+
+/* toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surf);border:1px solid var(--bdr);border-left:3px solid var(--ind);border-radius:8px;padding:11px 18px;font-size:13px;color:var(--txt);box-shadow:0 4px 18px rgba(0,0,0,.45);z-index:2000;max-width:380px;opacity:0;transform:translateY(8px);transition:opacity .15s,transform .15s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok{border-left-color:var(--grn)}
+.toast.err{border-left-color:var(--red)}
+
+/* PM list scrollable table */
+#pmListLoaded .tbl-wrap{max-height:555px;overflow-y:auto;border:1px solid var(--bdr);border-radius:6px}
+#pmListLoaded thead th{position:sticky;top:0;background:var(--surf2);z-index:1}
+
+/* empty / misc */
+.empty{text-align:center;padding:40px 20px;color:var(--muted);font-style:italic}
+.pdf-match-hint{font-size:11px;color:var(--grn);margin-top:4px}
+.pdf-nomatch-hint{font-size:11px;color:var(--ylw);margin-top:4px}
+
+@media(max-width:700px){
+  .hdr{padding:10px 12px;gap:8px}
+  .hdr h1{font-size:15px}
+  .hdr-spacer{display:none}
+  .main{padding:10px 12px}
+  /* Prevent iOS auto-zoom on input focus (needs >=16px) */
+  .form-input,.form-textarea,.form-select,
+  .hdr-field input,.hdr-field select{font-size:16px!important}
+  .tab-btn{padding:10px 10px;font-size:11px}
+  .btn{min-height:42px}
+  .btn-small{min-height:34px;padding:6px 12px}
+  .info-grid{grid-template-columns:1fr 1fr}
+  #pmListLoaded .tbl-wrap{font-size:11px}
+  .cl-item-hdr{padding:10px 12px}
+  .cl-item-hdr input[type=checkbox]{width:20px;height:20px;margin-top:0}
+  /* Hide less critical table columns on phones */
+  thead th:nth-child(4),tbody td:nth-child(4),
+  thead th:nth-child(5),tbody td:nth-child(5){display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
+<div class="hdr">
+  <h1>🔧 PM Audit</h1>
+  <div class="hdr-spacer"></div>
+  <label for="importXlsxInput" class="btn btn-secondary" title="Load a new CW / PM spreadsheet (.xlsx)" style="white-space:nowrap;cursor:pointer">
+    📂 New CW
+  </label>
+  <input type="file" id="importXlsxInput" accept=".xlsx,.xls,.zip,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/zip,application/octet-stream" style="display:none" onchange="importXlsx(event)">
+  <!-- hidden inputs kept for saveState() compatibility -->
+  <input id="auditorName" type="hidden">
+  <input id="shiftSel"    type="hidden">
+  <div class="hdr-user" id="hdrUserBadge" style="display:none">
+    <div style="font-size:22px">👤</div>
+    <div class="hdr-user-info">
+      <div class="hdr-user-name" id="hdrUserName"></div>
+      <div class="hdr-user-meta" id="hdrUserMeta"></div>
+    </div>
+    <button class="hdr-switch" onclick="showLoginScreen()">Switch User</button>
+  </div>
+</div>
+
+<!-- ═══ TAB BAR ══════════════════════════════════════════════════════════════ -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="audits" onclick="switchTab('audits')">
+    📋 PM Audits <span class="count" id="cntAudits">0</span>
+  </button>
+  <button class="tab-btn" data-tab="export" onclick="switchTab('export')">
+    📤 Export <span class="count" id="cntExport">0</span>
+  </button>
+  <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">
+    ⚙️ Settings
+  </button>
+</div>
+
+<!-- ═══ MAIN ══════════════════════════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- ── PM AUDITS ──────────────────────────────────────────────────────────── -->
+  <div class="section active" id="sec-audits">
+
+    <!-- PM List card -->
+    <div class="card" id="pmListCard">
+      <div id="pmListEmpty" class="empty" style="padding:30px 20px">
+        No PM list imported yet.<br>
+        Click <strong>📂 Import PM List</strong> above to load a completed PM spreadsheet.
+      </div>
+      <div id="pmListLoaded" style="display:none">
+        <div class="entries-row">
+          <div>
+            <div class="card-t" style="margin:0">PM Activities
+              <span id="pmCount" style="color:var(--muted);font-weight:400;font-size:11px">(0)</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px" id="pmFileName"></div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px" id="pmSourceStatus"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="pmSearch" class="form-input" placeholder="Filter..." style="width:180px;padding:6px 10px"
+              oninput="renderPMList()">
+            <label for="importXlsxInput" class="btn btn-secondary btn-small" style="cursor:pointer">↻ Re-import</label>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Order</th><th>Description</th><th>Functional Location</th>
+              <th>Description of functional location</th>
+              <th>Closed</th>
+              <th>Technician (Last Changed By)</th><th></th>
+            </tr></thead>
+            <tbody id="pmListBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Form card (hidden until a row is selected) -->
+    <div class="card" id="auditFormCard" style="display:none">
+      <div class="entries-row" style="margin-bottom:14px">
+        <div class="card-t" style="margin:0">Audit Form
+          <span id="auditStatusBadge" style="margin-left:8px"></span>
+        </div>
+        <button class="btn btn-secondary btn-small" onclick="closeAuditForm()">✕ Close</button>
+      </div>
+
+      <!-- PM Info -->
+      <div class="sec-lbl">PM Information</div>
+      <div class="info-grid" id="pmInfoGrid"></div>
+
+      <!-- Reference PDF -->
+      <div class="sec-lbl" style="margin-top:14px">Reference Document (PM PDF)</div>
+      <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px">
+        <div style="flex:1;min-width:200px">
+          <select id="pdfSelect" class="form-select" onchange="onPdfSelected()">
+            <option value="">-- select PM reference PDF --</option>
+          </select>
+          <div id="pdfMatchHint" style="margin-top:4px;font-size:11px"></div>
+        </div>
+        <button class="btn" onclick="loadChecklist()">📋 Build Checklist</button>
+      </div>
+      <div id="pdfFolderWarn" style="display:none;margin-top:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:10px 14px">
+        <div style="font-size:12px;color:var(--ylw);font-weight:600;margin-bottom:6px">⚠ PM PDF folder not linked on this device</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+          The PDF task lists are the source for building checklists. Link the folder that contains the <strong style="color:var(--txt)">PM PDF</strong> subfolder once and the app will remember it.
+        </div>
+        <button class="btn btn-small" style="background:var(--ylw);color:#000;font-weight:700" onclick="pickAuditFolder().then(function(){ populatePdfDropdown(_currentAudit&&_currentAudit.pdfFile); })">
+          📁 Link PM PDF Folder Now
+        </button>
+      </div>
+
+      <!-- Checklist (hidden until built) -->
+      <div id="checklistSection" style="display:none;margin-top:6px">
+        <div class="sec-lbl" style="margin-top:8px">
+          Checklist
+          <span id="checklistProgress" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--grn);margin-left:8px;font-size:11px"></span>
+        </div>
+        <div id="checklistBody"></div>
+
+        <!-- Overall notes -->
+        <div class="sec-lbl" style="margin-top:18px">Overall Notes &amp; Observations</div>
+        <textarea id="overallNotes" class="form-textarea"
+          placeholder="General observations, issues found, recommendations, follow-up actions..."
+          style="min-height:90px" oninput="onOverallNotesChange()"></textarea>
+
+        <!-- Overall images -->
+        <div class="img-attach-row" style="margin-top:10px">
+          <div class="img-attach-label">📎 Overall Images (optional)</div>
+          <div class="img-attach-btns">
+            <button class="btn btn-secondary btn-small"
+              onclick="triggerImagePicker('overall')">📁 From file</button>
+            <button class="btn btn-secondary btn-small"
+              onclick="openCameraFor('overall')">📸 Camera</button>
+          </div>
+          <div class="img-preview-grid" id="overallImgGrid"></div>
+        </div>
+
+        <!-- Validation error banner -->
+        <div id="submitValidationErr" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:12px 16px;margin-top:16px">
+          <div style="font-weight:700;color:#fca5a5;margin-bottom:8px">⚠ Cannot submit — the following operations still need a verdict:</div>
+          <ul id="submitValidationList" style="margin:0 0 0 16px;font-size:12px;color:#fca5a5;line-height:1.8"></ul>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px">Scroll up and mark each highlighted operation as <strong style="color:#6ee7b7">OK</strong> or <strong style="color:#fca5a5">NOK</strong> before submitting.</div>
+        </div>
+
+        <!-- Save / Submit -->
+        <div class="form-actions" style="margin-top:12px">
+          <button class="btn btn-secondary" onclick="saveAuditDraft()">💾 Save Draft</button>
+          <button class="btn btn-green" onclick="submitAudit()">✓ Submit &amp; Export</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EXPORT ──────────────────────────────────────────────────────────────── -->
+  <div class="section" id="sec-export">
+    <div class="card">
+      <div class="card-t">Saved Audits</div>
+      <div class="card-s">All saved drafts and submitted audits. Click Re-export to download again.</div>
+      <div id="exportList"><div class="empty">No audits saved yet.</div></div>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS ───────────────────────────────────────────────────────────── -->
+  <div class="section" id="sec-settings">
+    <div class="card">
+      <div class="card-t">📁 Audit Folder</div>
+      <div class="card-s">
+        Pick the <code>audit</code> folder (next to this app file). It must contain a
+        <code>PM PDF</code> subfolder with the reference PDF task lists. Saved reports are also written here.
+      </div>
+      <div class="folder-card">
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Linked folder</div>
+          <div id="folderNameEl" class="folder-none">No folder linked yet</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="pickAuditFolder()">📁 Pick Folder</button>
+          <button class="btn btn-secondary btn-small" id="unlinkBtn" style="display:none"
+            onclick="unlinkAuditFolder()">Unlink</button>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+        Works in Microsoft Edge or Google Chrome. You only need to pick once — the folder is remembered.
+        Internet connection required for PDF reading (uses pdf.js from CDN).
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">✉️ Email Settings</div>
+      <div class="card-s">Supervisor email used when emailing reports.</div>
+      <div class="form-grid">
+        <div class="form-field full">
+          <label>Supervisor email</label>
+          <input id="supervisorEmail" type="email" class="form-input"
+            placeholder="supervisor@company.com" onchange="saveState()">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">📋 PM Source File</div>
+      <div class="card-s">
+        Pick the xlsx file in the audit folder that contains the PM work orders.
+        The app will auto-load it every time it opens — no manual import needed.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+        <select id="pmSourceSel" class="form-select" style="flex:1;min-width:180px" onchange="setPmSourceFile(this.value)">
+          <option value="">-- select xlsx in audit folder --</option>
+        </select>
+        <button class="btn btn-secondary btn-small" onclick="refreshPmSourceList()">↻ List files</button>
+        <button class="btn btn-small" onclick="reloadPmSource()" title="Re-read the source file now">🔄 Reload now</button>
+      </div>
+      <div id="pmSourceSettingsStatus" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+
+    <div class="card" style="border-color:rgba(99,102,241,.4)">
+      <div class="card-t" style="color:#a5b4fc">🧠 PDF Brain — Checklist Library</div>
+      <div class="card-s">Parse all PDF task lists and store the checklist data permanently inside the app. Once built, no folder or file access is ever needed — works on every device automatically.</div>
+      <div id="brainStatus" style="font-size:12px;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 14px;margin-bottom:12px;color:var(--muted)">
+        Loading…
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn" style="background:#6366f1" onclick="triggerZipBrainImport()" ontouchend="event.preventDefault();triggerZipBrainImport()">📦 Import ZIP</button>
+        <button class="btn btn-secondary btn-small" onclick="bakeAllPdfs()">🧠 Build from Folder</button>
+        <button class="btn btn-secondary btn-small" onclick="clearBakedPdfs()">Clear</button>
+        <span id="brainNote" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">
+        <strong style="color:var(--txt)">📦 Import ZIP</strong> — select a .zip of all PM PDFs (works on iPhone &amp; any device).<br>
+        <strong style="color:var(--txt)">🧠 Build from Folder</strong> — link the audit folder and build (Chrome/Edge desktop only).<br>
+        Done once — no folder ever needed again on this or any device.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">📱 PDF Library <span style="font-size:10px;color:var(--muted);font-weight:400">(works on phone)</span></div>
+      <div class="card-s">Import PDF task lists directly into the app — stored on this device. No folder needed. Works on iOS &amp; Android.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn" onclick="document.getElementById('pdfImportInput').click()">📂 Import PDF files</button>
+        <input type="file" id="pdfImportInput" multiple accept=".pdf,application/pdf" style="display:none" onchange="onPdfFilesImported(event)">
+      </div>
+      <div id="idbPdfList"><div class="empty" style="padding:8px 0">No PDFs imported yet.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">📡 Use on Phone via WiFi</div>
+      <div class="card-s">Run a local server on your PC then open the address on your phone while on the same WiFi network.</div>
+      <div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 14px;font-size:12px;line-height:1.8;margin-bottom:8px">
+        <strong>Step 1 —</strong> Open Command Prompt in the folder where <code>PM Audit.html</code> is saved<br>
+        <strong>Step 2 —</strong> Run: &nbsp;<code style="background:var(--bg);padding:2px 6px;border-radius:4px">python -m http.server 8080</code><br>
+        <strong>Step 3 —</strong> Find PC's IP: run <code style="background:var(--bg);padding:2px 6px;border-radius:4px">ipconfig</code> → look for IPv4 Address<br>
+        <strong>Step 4 —</strong> On phone browser: <code style="background:var(--bg);padding:2px 6px;border-radius:4px">http://[PC-IP]:8080/PM%20Audit.html</code>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">To install on phone home screen: open in Safari (iOS) → Share → Add to Home Screen. On Android Chrome → menu → Add to Home Screen.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">🗑️ Data Management</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        <button class="btn btn-secondary" onclick="backupData()">⬇ Download backup (JSON)</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('restoreInput').click()">
+          ⬆ Restore from backup</button>
+        <input id="restoreInput" type="file" accept=".json" style="display:none" onchange="restoreData(event)">
+        <button class="btn btn-danger" onclick="resetAll()">Clear all data</button>
+      </div>
+    </div>
+  </div>
+</div><!-- /main -->
+
+<!-- ═══ CAMERA MODAL ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="cameraModal" onclick="if(event.target===this)closeCameraModal()">
+  <div class="modal-box" style="max-width:720px">
+    <div class="modal-hdr">
+      <h3>📸 Take Photo</h3>
+      <button class="btn btn-secondary btn-small" onclick="closeCameraModal()">Close</button>
+    </div>
+    <div class="modal-body">
+      <div id="camStage" class="cam-stage">
+        <video id="camVideo" autoplay playsinline muted></video>
+        <canvas id="camCanvas"></canvas>
+      </div>
+      <div id="camPreviewWrap" class="cam-preview" style="display:none">
+        <img id="camPreviewImg" alt="captured">
+      </div>
+      <div id="camStatus" class="cam-status"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeCameraModal()">Cancel</button>
+      <div style="flex:1"></div>
+      <div id="captureBtns" style="display:flex;gap:10px">
+        <button class="btn btn-green" onclick="capturePhoto()">📸 Capture</button>
+      </div>
+      <div id="confirmBtns" style="display:none;gap:10px">
+        <button class="btn btn-secondary" onclick="retakePhoto()">↻ Retake</button>
+        <button class="btn btn-green" onclick="acceptPhoto()">✓ Use this photo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ IMAGE VIEWER MODAL ════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="imageViewerModal" onclick="if(event.target===this)closeImageViewer()">
+  <div class="modal-box" style="max-width:1000px">
+    <div class="modal-hdr">
+      <h3 id="imageViewerTitle">Image</h3>
+      <button class="btn btn-secondary btn-small" onclick="closeImageViewer()">Close</button>
+    </div>
+    <div class="modal-body img-viewer">
+      <img id="viewerImg" src="" alt="">
+    </div>
+  </div>
+</div>
+
+<!-- PDF Debug Modal -->
+<div class="modal-overlay" id="pdfDebugModal" onclick="if(event.target===this)closePdfDebugModal()">
+  <div class="modal-box" style="max-width:820px">
+    <div class="modal-hdr">
+      <h3>📄 Raw Extracted PDF Text</h3>
+      <button class="btn btn-secondary btn-small" onclick="closePdfDebugModal()">Close</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">
+        No checklist steps were found. The text below is what the app read from the PDF.
+        Copy it and share it so the parser can be updated to support this PDF's format.
+      </p>
+      <textarea id="pdfDebugText" class="form-textarea"
+        style="font-family:monospace;font-size:10px;min-height:380px;line-height:1.4" readonly></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="copyPdfDebugText()">📋 Copy all text</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-secondary" onclick="closePdfDebugModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save-file dialog -->
+<div class="modal-overlay" id="saveModal" onclick="if(event.target===this)_saveDlgResolve&&_saveDlgResolve('cancel')">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-hdr">
+      <h3>💾 Save Report</h3>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">File ready to save:</div>
+      <div id="saveDlgFilename" style="font-family:monospace;font-size:12px;background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;padding:10px 14px;margin-bottom:20px;word-break:break-all"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-green" style="flex:1" id="saveDlgPickerBtn" onclick="_saveDlgResolve&&_saveDlgResolve('picker')">
+          📂 Save As… <span style="font-size:10px;font-weight:400;display:block">Choose folder &amp; filename</span>
+        </button>
+        <button class="btn btn-secondary" style="flex:1" onclick="_saveDlgResolve&&_saveDlgResolve('download')">
+          ⬇ Download <span style="font-size:10px;font-weight:400;display:block">Save to Downloads folder</span>
+        </button>
+      </div>
+      <div id="saveDlgNote" style="margin-top:12px;font-size:11px;color:var(--muted)"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="_saveDlgResolve&&_saveDlgResolve('cancel')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LOGIN SCREEN ══════════════════════════════════════════════════════════ -->
+<!-- ═══ ONBOARDING MODAL (first-run setup) ═══════════════════════════════════ -->
+<div id="onboardModal" class="onboard-overlay" style="display:none">
+  <div class="onboard-box">
+
+    <!-- ── Phase 1: Intro ── -->
+    <div id="onboardPhase1">
+      <div style="font-size:36px;text-align:center;margin-bottom:10px">🧠</div>
+      <h2 style="text-align:center;font-size:20px;font-weight:800;margin-bottom:6px">One-time setup</h2>
+      <p style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:12px">
+        The app needs to read your PM task list PDFs once to build its checklist library.<br>
+        After this, <strong style="color:var(--txt)">no file access is ever needed again</strong> — on any device.
+      </p>
+
+      <!-- Primary: ZIP import (works on all devices including iPhone) -->
+      <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.4);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:#a5b4fc;margin-bottom:6px">📦 Recommended — works on all devices</div>
+        <div class="onboard-steps" style="margin-bottom:10px">
+          <div class="onboard-step">
+            <div class="onboard-step-num">1</div>
+            <div class="onboard-step-txt">Zip all your PM PDF task list files into a single <code>.zip</code> file and transfer it to your phone or computer.</div>
+          </div>
+          <div class="onboard-step">
+            <div class="onboard-step-num">2</div>
+            <div class="onboard-step-txt">Tap the button below to select that ZIP — the app reads every PDF inside it automatically.</div>
+          </div>
+          <div class="onboard-step">
+            <div class="onboard-step-num">3</div>
+            <div class="onboard-step-txt"><strong>Done.</strong> Import any CW xlsx and start auditing. No folder needed, ever.</div>
+          </div>
+        </div>
+        <button class="btn" style="width:100%;padding:13px;font-size:15px;font-weight:700;background:#6366f1"
+          onclick="_onboardZip()" ontouchend="event.preventDefault();_onboardZip()">
+          📦 Select ZIP &amp; Build
+        </button>
+      </div>
+
+      <!-- Secondary: Folder picker (Chrome/Edge desktop only) -->
+      <div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:12px" id="onboardFolderSection">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">📁 Desktop only (Chrome / Edge)</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Link the folder that contains your <code>PM PDF</code> subfolder.</div>
+        <button class="btn btn-secondary" style="width:100%"
+          onclick="onboardPickAndBuild()" ontouchend="event.preventDefault();onboardPickAndBuild()">
+          📁 Select Folder &amp; Build
+        </button>
+      </div>
+
+      <div style="text-align:center">
+        <button class="btn btn-secondary btn-small" onclick="closeOnboard()"
+          ontouchend="event.preventDefault();closeOnboard()">
+          Skip for now (set up later in Settings)
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Phase 2: Progress ── -->
+    <div id="onboardPhase2" style="display:none">
+      <div style="font-size:36px;text-align:center;margin-bottom:12px">⚙️</div>
+      <h2 style="text-align:center;font-size:18px;font-weight:800;margin-bottom:16px">Building checklist library…</h2>
+      <div class="onboard-progress-bar-wrap">
+        <div class="onboard-progress-bar" id="onboardBar"></div>
+      </div>
+      <div style="text-align:center;font-size:13px;font-weight:600;margin-top:8px" id="onboardPct">0%</div>
+      <div class="onboard-file-name" id="onboardFile">Starting…</div>
+    </div>
+
+    <!-- ── Phase 3: Done ── -->
+    <div id="onboardPhase3" style="display:none">
+      <div class="onboard-done-icon">✅</div>
+      <div class="onboard-done-count" id="onboardCount">0</div>
+      <div style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:4px">checklists loaded into app</div>
+      <p style="text-align:center;font-size:13px;margin:16px 0">
+        The folder is no longer needed on this device. Import a CW xlsx with <strong>📂 New CW</strong> and start auditing.
+      </p>
+      <button class="btn btn-green" style="width:100%;padding:13px;font-size:15px;font-weight:700"
+        onclick="closeOnboard()" ontouchend="event.preventDefault();closeOnboard()">
+        Let's Go →
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🔧</div>
+    <div class="login-app-name">Audits</div>
+
+    <div id="loginError" class="login-error"></div>
+
+    <form id="loginForm" novalidate style="margin:0">
+      <div class="login-field">
+        <label for="loginUser">User Name</label>
+        <input id="loginUser" type="text" class="form-input" placeholder="Full name" autocomplete="name">
+      </div>
+      <div class="login-field">
+        <label for="loginShift">Shift</label>
+        <select id="loginShift" class="form-select">
+          <option>1st shift</option>
+          <option>2nd shift</option>
+          <option>3rd shift</option>
+        </select>
+      </div>
+      <div class="login-field">
+        <label for="loginTitle">Title / Role</label>
+        <input id="loginTitle" type="text" class="form-input" placeholder="e.g. PLC, RB, Weld">
+      </div>
+      <div class="login-field">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" class="form-input" placeholder="" autocomplete="email">
+      </div>
+      <button type="submit" class="btn login-btn">Sign In →</button>
+    </form>
+  </div>
+</div>
+
+<!-- Hidden image file input (shared, routed by _imgTarget) -->
+<input type="file" id="sharedImgInput" accept="image/*" style="display:none" onchange="onSharedImageSelected(event)">
+<!-- Hidden ZIP input for PDF Brain import -->
+<input type="file" id="zipBrainInput" accept=".zip,application/zip" style="display:none" onchange="onZipBrainSelected(event)">
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══ SCRIPT ════════════════════════════════════════════════════════════════ -->
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// State & persistence
+// ════════════════════════════════════════════════════════════════════════════
+var SK = 'pmAudit_v1';
+var state = {
+  auditorName: '',
+  shift: '1st shift',
+  userTitle: '',
+  userEmail: '',
+  folderName: '',
+  supervisorEmail: '',
+  importedPMs: [],
+  importedFileName: '',
+  pmSourceFile: '',       // xlsx in audit folder to auto-reload on startup
+  pmSourceLastLoad: '',   // ISO timestamp of last successful auto-load
+  audits: [],
+  currentTab: 'audits',
+  availablePdfs: [],
+  selectedPmIdx: null
+};
+
+function loadState() {
+  try {
+    var raw = localStorage.getItem(SK);
+    if (raw) Object.assign(state, JSON.parse(raw));
+  } catch(e) {}
+}
+function saveState() {
+  var an = document.getElementById('auditorName'); if (an) state.auditorName = an.value.trim();
+  var sh = document.getElementById('shiftSel');   if (sh) state.shift = sh.value;
+  var se = document.getElementById('supervisorEmail'); if (se) state.supervisorEmail = se.value.trim();
+  try { localStorage.setItem(SK, JSON.stringify(state)); } catch(e) { toast('Save failed: ' + e.message, 'err'); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PDF Brain — parsed checklist library (persisted in localStorage)
+// ════════════════════════════════════════════════════════════════════════════
+var BRAIN_KEY = 'pmAuditBrain_v1';
+var _brain = {};  // { "filename.pdf": [ {opNum, title, items:[{num,text,notes}]} ] }
+
+function loadBrain() {
+  try { var r = localStorage.getItem(BRAIN_KEY); if (r) _brain = JSON.parse(r); } catch(e) { _brain = {}; }
+}
+function saveBrain() {
+  try { localStorage.setItem(BRAIN_KEY, JSON.stringify(_brain)); } catch(e) { toast('Brain save failed: ' + e.message, 'err'); }
+}
+function renderBrainStatus() {
+  var el = document.getElementById('brainStatus');
+  var note = document.getElementById('brainNote');
+  if (!el) return;
+  var count = Object.keys(_brain).length;
+  if (!count) {
+    el.innerHTML = '<span style="color:var(--ylw)">⚠ No checklists baked yet.</span> Link the folder and click <strong>Build into App</strong>.';
+    if (note) note.textContent = '';
+    return;
+  }
+  var names = Object.keys(_brain).sort();
+  el.innerHTML = '<span style="color:#6ee7b7;font-weight:700">✓ ' + count + ' PDFs baked</span>'
+    + '<div style="margin-top:6px;max-height:120px;overflow-y:auto">'
+    + names.map(function(n){ return '<div style="color:var(--txt);font-size:11px">📄 '+esc(n)+'</div>'; }).join('')
+    + '</div>';
+  if (note) note.textContent = 'Last built: ' + (localStorage.getItem(BRAIN_KEY+'_ts') || 'unknown');
+}
+
+async function bakeAllPdfs() {
+  var statusEl = document.getElementById('brainStatus');
+  function setStatus(msg) { if (statusEl) statusEl.innerHTML = msg; }
+
+  // Make sure we have PDF sources
+  await _ensureDirHandle().catch(function(){});
+  await loadAvailablePdfs();
+
+  var sources = state.availablePdfs || [];
+  if (!sources.length) {
+    // Try IDB as well
+    var idbKeys = await _pdfIdbKeys().catch(function(){ return []; });
+    sources = idbKeys;
+  }
+  if (!sources.length) {
+    setStatus('<span style="color:var(--red)">⚠ No PDFs found. Link the audit folder above, or import PDFs via PDF Library, then try again.</span>');
+    toast('No PDFs found — link the folder or import PDFs first', 'err');
+    return;
+  }
+
+  setStatus('Starting — loading pdf.js…');
+  try { await ensurePdfJs(); } catch(e) {
+    setStatus('<span style="color:var(--red)">⚠ Could not load pdf.js. Internet connection required for the first bake.</span>');
+    return;
+  }
+
+  var baked = 0, failed = [], newBrain = Object.assign({}, _brain);
+
+  for (var i = 0; i < sources.length; i++) {
+    var fn = sources[i];
+    setStatus('Baking ' + (i + 1) + ' / ' + sources.length + ' — <em>' + esc(fn) + '</em>');
+    try {
+      var items = await _loadPdfItems(fn);
+      var bestScore = -1, bestOps = [];
+      [4, 6, 8, 11, 14, 18].forEach(function(gap) {
+        var ops = parsePdfChecklist(_reconstructText(items, gap));
+        var score = ops.reduce(function(s, op){ return s + op.items.length; }, 0);
+        if (score > bestScore) { bestScore = score; bestOps = ops; }
+      });
+      if (bestOps.length) {
+        newBrain[fn] = bestOps;
+        baked++;
+      } else {
+        failed.push(fn);
+      }
+    } catch(e) {
+      console.warn('Bake failed for', fn, e.message);
+      failed.push(fn);
+    }
+  }
+
+  _brain = newBrain;
+  saveBrain();
+  try { localStorage.setItem(BRAIN_KEY + '_ts', new Date().toLocaleString()); } catch(e) {}
+
+  var msg = '✓ Baked ' + baked + ' of ' + sources.length + ' PDFs into app.';
+  if (failed.length) msg += ' ' + failed.length + ' could not be read: ' + failed.join(', ');
+  toast(msg, baked ? 'ok' : 'err');
+  renderBrainStatus();
+}
+
+function clearBakedPdfs() {
+  if (!confirm('Clear all baked checklist data from the app? You can rebuild it any time.')) return;
+  _brain = {};
+  saveBrain();
+  renderBrainStatus();
+  toast('PDF Brain cleared', 'ok');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Onboarding (first-run setup)
+// ════════════════════════════════════════════════════════════════════════════
+function checkFirstRun() {
+  if (Object.keys(_brain).length === 0) {
+    document.getElementById('onboardModal').style.display = 'flex';
+  }
+}
+
+function closeOnboard() {
+  document.getElementById('onboardModal').style.display = 'none';
+}
+
+function _onboardZip() {
+  var input = document.getElementById('zipBrainInput');
+  input.value = '';
+  // Use a one-time handler so we know we came from onboarding
+  input.onchange = function(event) {
+    input.onchange = function(e) { onZipBrainSelected(e); }; // restore default
+    var file = event.target.files && event.target.files[0];
+    input.value = '';
+    if (!file) return;
+    _startZipImport(file, true);
+  };
+  input.click();
+}
+
+async function onboardPickAndBuild() {
+  // ── Step 1: pick folder ──
+  if (typeof window.showDirectoryPicker !== 'function') {
+    toast('Folder picker not supported on this device. Use the ZIP import instead.', 'err');
+    return;
+  }
+
+  await pickAuditFolder();
+  if (!_auditDirHandle) return; // user cancelled
+
+  // ── Step 2: show progress phase ──
+  document.getElementById('onboardPhase1').style.display = 'none';
+  document.getElementById('onboardPhase2').style.display = '';
+
+  function setProgress(i, total, filename) {
+    var pct = total ? Math.round(i / total * 100) : 0;
+    document.getElementById('onboardBar').style.width = pct + '%';
+    document.getElementById('onboardPct').textContent = pct + '%  (' + i + ' / ' + total + ')';
+    document.getElementById('onboardFile').textContent = filename || '';
+  }
+
+  document.getElementById('onboardFile').textContent = 'Loading PDF reader…';
+  try { await ensurePdfJs(); } catch(e) {
+    document.getElementById('onboardFile').textContent = '⚠ Could not load pdf.js — internet required for first build. Try again when connected.';
+    return;
+  }
+
+  await loadAvailablePdfs();
+  var sources = state.availablePdfs || [];
+  if (!sources.length) {
+    document.getElementById('onboardFile').textContent = '⚠ No PDFs found. Make sure the folder contains a "PM PDF" subfolder with .pdf files.';
+    return;
+  }
+
+  var baked = 0;
+  setProgress(0, sources.length, 'Starting…');
+
+  for (var i = 0; i < sources.length; i++) {
+    var fn = sources[i];
+    setProgress(i, sources.length, fn);
+    try {
+      var items = await _loadPdfItems(fn);
+      var bestScore = -1, bestOps = [];
+      [4, 6, 8, 11, 14, 18].forEach(function(gap) {
+        var ops = parsePdfChecklist(_reconstructText(items, gap));
+        var score = ops.reduce(function(s, op){ return s + op.items.length; }, 0);
+        if (score > bestScore) { bestScore = score; bestOps = ops; }
+      });
+      if (bestOps.length) { _brain[fn] = bestOps; baked++; }
+    } catch(e) { console.warn('Onboard bake skip:', fn, e.message); }
+  }
+
+  setProgress(sources.length, sources.length, 'Saving…');
+  saveBrain();
+  try { localStorage.setItem(BRAIN_KEY + '_ts', new Date().toLocaleString()); } catch(e) {}
+
+  // ── Step 3: done ──
+  document.getElementById('onboardPhase2').style.display = 'none';
+  document.getElementById('onboardPhase3').style.display = '';
+  document.getElementById('onboardCount').textContent = baked;
+  renderBrainStatus();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Utilities
+// ════════════════════════════════════════════════════════════════════════════
+function todayIso() {
+  var d = new Date();
+  return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+}
+function pad2(n) { return n < 10 ? '0'+n : ''+n; }
+function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg, kind) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (kind ? ' '+kind : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ t.classList.remove('show'); }, 4000);
+}
+function onAuditorChanged() { saveState(); }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Tabs
+// ════════════════════════════════════════════════════════════════════════════
+function switchTab(name) {
+  state.currentTab = name;
+  ['audits','export','settings'].forEach(function(t){
+    var btn = document.querySelector('[data-tab="'+t+'"]');
+    var sec = document.getElementById('sec-'+t);
+    if (btn) btn.classList.toggle('active', t === name);
+    if (sec) sec.classList.toggle('active', t === name);
+  });
+  if (name === 'export')   renderExportList();
+  if (name === 'settings') { renderFolderCard(); renderIdbPdfList(); refreshPmSourceList(); renderBrainStatus(); }
+  saveState();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// XLSX Import
+// ════════════════════════════════════════════════════════════════════════════
+function importXlsx(event) {
+  var file = event.target.files && event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  if (/\.zip$/i.test(file.name) || file.type === 'application/zip') {
+    _importXlsxFromZip(file);
+    return;
+  }
+  _readXlsxBuffer(file.name, function(buf) {
+    _processXlsxBuffer(buf, file.name);
+  }, file);
+}
+
+function _readXlsxBuffer(name, cb, file) {
+  var reader = new FileReader();
+  reader.onload = function(e) { cb(e.target.result); };
+  reader.onerror = function() { toast('Could not read file: ' + name, 'err'); };
+  reader.readAsArrayBuffer(file);
+}
+
+function _processXlsxBuffer(buf, filename) {
+  try {
+    var wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    var pms = parseWorkbook(wb);
+    if (!pms.length) { toast('No data rows found in this file', 'err'); return; }
+    state.importedPMs = pms;
+    state.importedFileName = filename;
+    state.selectedPmIdx = null;
+    saveState();
+    renderPMList();
+    document.getElementById('auditFormCard').style.display = 'none';
+    toast('Imported ' + pms.length + ' PM activities from ' + filename, 'ok');
+  } catch(err) {
+    toast('Could not read file: ' + err.message, 'err');
+  }
+}
+
+async function _importXlsxFromZip(zipFile) {
+  toast('Opening ZIP…', 'ok');
+  try {
+    await ensureJSZip();
+    var zip = await JSZip.loadAsync(zipFile);
+    var xlsxEntries = [];
+    zip.forEach(function(relPath, entry) {
+      if (!entry.dir && /\.(xlsx|xls)$/i.test(relPath)) xlsxEntries.push({ name: entry.name, entry: entry });
+    });
+    if (!xlsxEntries.length) { toast('No Excel file found inside the ZIP.', 'err'); return; }
+    var pick = xlsxEntries[0]; // use first xlsx found
+    var baseName = pick.name.split('/').pop();
+    var buf = await pick.entry.async('arraybuffer');
+    _processXlsxBuffer(buf, baseName);
+  } catch(e) {
+    toast('ZIP import failed: ' + e.message, 'err');
+  }
+}
+
+function parseWorkbook(wb) {
+  // Try each sheet, use the one with most data rows
+  var best = [], bestName = '';
+  wb.SheetNames.forEach(function(sn) {
+    var rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header:1, defval:'' });
+    if (rows.length > best.length) { best = rows; bestName = sn; }
+  });
+  if (!best.length) return [];
+  // Find header row (first row with "order" or "functional" in it)
+  var hdrIdx = 0;
+  for (var i = 0; i < Math.min(best.length, 5); i++) {
+    var h = best[i].map(function(c){ return String(c).toLowerCase(); }).join(' ');
+    if (h.includes('order') || h.includes('functional')) { hdrIdx = i; break; }
+  }
+  var hdr = best[hdrIdx].map(function(c){ return String(c).toLowerCase().trim(); });
+
+  // Exact match wins; then includes with optional exclude list
+  function col(candidates, excludes) {
+    excludes = excludes || [];
+    for (var ci = 0; ci < candidates.length; ci++) {
+      for (var j = 0; j < hdr.length; j++) {
+        if (hdr[j] === candidates[ci]) return j;
+      }
+    }
+    for (var ci = 0; ci < candidates.length; ci++) {
+      for (var j = 0; j < hdr.length; j++) {
+        if (hdr[j].includes(candidates[ci])) {
+          var excluded = excludes.some(function(ex){ return hdr[j].includes(ex); });
+          if (!excluded) return j;
+        }
+      }
+    }
+    return -1;
+  }
+
+  var C = {
+    order:           col(['order']),
+    wc:              col(['main work center','work center']),
+    desc:            col(['description'], ['functional','fl']),
+    fl:              col(['functional loc','functional location']),
+    descFL:          col(['description of func','description of functional','fl description']),
+    work:            col(['work'], ['center','actual','unit','changed']),
+    basicFinishDate: col(['basic finish']),
+    finishDate:      col(['actual order finish','actual finish date']),
+    tech:            col(['last changed by','last name','technician']),
+    status:          col(['system status','status']),
+    inspector:       col(['engineer over','inspector']),
+    orderType:       col(['order type'])
+  };
+
+  var pms = [];
+  for (var r = hdrIdx + 1; r < best.length; r++) {
+    var row = best[r];
+    var order = String(row[C.order] || '').trim();
+    if (!order || order === 'Order') continue;
+    // Skip lock/temp rows
+    if (order.startsWith('~$')) continue;
+    var tech = '';
+    if (C.tech >= 0) tech = String(row[C.tech] || '').trim();
+    function fmtDate(val) {
+      if (!val && val !== 0) return '';
+      // Already a JS Date (when cellDates:true)
+      if (val instanceof Date) {
+        return !isNaN(val) ? val.toISOString().slice(0,10) : '';
+      }
+      // Excel serial number — convert properly
+      var num = typeof val === 'number' ? val
+              : (typeof val === 'string' && /^\d+(\.\d+)?$/.test(val.trim()) ? parseFloat(val) : NaN);
+      if (!isNaN(num) && num > 100) {
+        // Excel epoch is Jan 0 1900; Excel falsely counts 1900 as leap year (serial 60)
+        var days = num > 59 ? num - 2 : num - 1;
+        var d = new Date(Date.UTC(1900, 0, 1) + days * 86400000);
+        return !isNaN(d) ? d.toISOString().slice(0,10) : '';
+      }
+      // Already a date-like string
+      if (typeof val === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}/.test(val)) return val.slice(0,10);
+        try {
+          var d2 = new Date(val);
+          if (!isNaN(d2)) return d2.toISOString().slice(0,10);
+        } catch(e) {}
+      }
+      return '';
+    }
+    pms.push({
+      id:              r + '_' + order,
+      order:           order,
+      wc:              C.wc >= 0              ? String(row[C.wc]              || '').trim() : '',
+      desc:            C.desc >= 0            ? String(row[C.desc]            || '').trim() : '',
+      fl:              C.fl >= 0              ? String(row[C.fl]              || '').trim() : '',
+      descFL:          C.descFL >= 0          ? String(row[C.descFL]          || '').trim() : '',
+      work:            C.work >= 0            ? String(row[C.work]            || '').trim() : '',
+      basicFinishDate: C.basicFinishDate >= 0 ? fmtDate(row[C.basicFinishDate]) : '',
+      finishDate:      C.finishDate >= 0      ? fmtDate(row[C.finishDate])      : '',
+      tech:            tech,
+      status:          C.status >= 0          ? String(row[C.status]          || '').trim() : '',
+      inspector:       C.inspector >= 0       ? String(row[C.inspector]       || '').trim() : '',
+      orderType:       C.orderType >= 0       ? String(row[C.orderType]       || '').trim() : ''
+    });
+  }
+  return pms;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PM List rendering
+// ════════════════════════════════════════════════════════════════════════════
+function renderPMList() {
+  var pms = state.importedPMs || [];
+  document.getElementById('pmListEmpty').style.display   = pms.length ? 'none' : '';
+  document.getElementById('pmListLoaded').style.display  = pms.length ? ''     : 'none';
+  if (!pms.length) return;
+  document.getElementById('pmCount').textContent = '(' + pms.length + ')';
+  document.getElementById('pmFileName').textContent = state.importedFileName || '';
+  renderPmSourceStatus();
+  document.getElementById('cntAudits').textContent = state.audits.length;
+
+  var q = (document.getElementById('pmSearch').value || '').toLowerCase();
+  var filtered = pms.filter(function(p) {
+    if (!q) return true;
+    return (p.order+' '+p.desc+' '+p.fl+' '+p.tech+' '+p.status).toLowerCase().includes(q);
+  });
+
+  var tbody = document.getElementById('pmListBody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);font-style:italic">No matching rows.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(function(p) {
+    var hasAudit = getAuditForOrder(p.order);
+    var badge = hasAudit
+      ? '<span class="status-badge ' + (hasAudit.auditStatus === 'Submitted' ? 'badge-submitted' : 'badge-draft') + '" style="font-size:9px;padding:1px 6px;margin-right:4px">'
+        + hasAudit.auditStatus + '</span>'
+      : '';
+    var sel = (state.selectedPmIdx !== null && state.importedPMs[state.selectedPmIdx] && state.importedPMs[state.selectedPmIdx].order === p.order);
+    return '<tr class="'+(sel?'row-selected':'')+'" onclick="startAudit(\''+esc(p.order)+'\')">'
+      + '<td style="font-family:monospace;font-size:11px;color:#cbd5e1;white-space:nowrap">'+esc(p.order)+'</td>'
+      + '<td style="max-width:220px;word-break:break-word">'+badge+esc(p.desc)+'</td>'
+      + '<td style="font-family:monospace;font-size:11px;color:var(--muted);white-space:nowrap">'+esc(p.fl)+'</td>'
+      + '<td style="max-width:180px;word-break:break-word;color:var(--muted);font-size:12px">'+esc(p.descFL)+'</td>'
+      + (function(){
+          var closed = p.finishDate, due = p.basicFinishDate;
+          var bg = '';
+          if (closed && due) {
+            if (closed > due)       bg = 'background:rgba(239,68,68,.18);color:#fca5a5;';
+            else if (closed < due)  bg = 'background:rgba(16,185,129,.15);color:#6ee7b7;';
+          }
+          var tip = due ? 'title="Due: '+due+'"' : '';
+          return '<td '+tip+' style="white-space:nowrap;font-size:12px;border-radius:4px;cursor:default;'+bg+'">'+esc(closed||'—')+'</td>';
+        })()
+      + '<td style="font-weight:600">'+esc(p.tech)+'</td>'
+      + '<td><button class="btn btn-small" onclick="event.stopPropagation();startAudit(\''+esc(p.order)+'\')">'
+        + (hasAudit ? (hasAudit.auditStatus === 'Submitted' ? 'View' : 'Edit') : 'Audit')
+        + '</button></td>'
+    + '</tr>';
+  }).join('');
+}
+
+function getAuditForOrder(order) {
+  return (state.audits || []).find(function(a){ return a.order === order; }) || null;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Current audit in memory
+// ════════════════════════════════════════════════════════════════════════════
+var _currentAudit = null;  // the audit object being built / edited
+var _imgTarget = null;     // {type:'step',opIdx,stepIdx} | {type:'overall'}
+var _cameraTarget = null;  // same shape
+
+function startAudit(order) {
+  var pm = (state.importedPMs || []).find(function(p){ return p.order === order; });
+  if (!pm) return;
+
+  // Store selected index
+  state.selectedPmIdx = state.importedPMs.indexOf(pm);
+
+  // Load existing audit or create new
+  var existing = getAuditForOrder(order);
+  if (existing) {
+    _currentAudit = JSON.parse(JSON.stringify(existing)); // deep clone
+  } else {
+    _currentAudit = {
+      id:          makeId(),
+      auditStatus: 'Draft',
+      auditorName: state.auditorName,
+      shift:       state.shift,
+      auditDate:   todayIso(),
+      order:           pm.order,
+      wc:              pm.wc,
+      desc:            pm.desc,
+      fl:              pm.fl,
+      descFL:          pm.descFL,
+      work:            pm.work,
+      basicFinishDate: pm.basicFinishDate,
+      finishDate:      pm.finishDate,
+      tech:            pm.tech,
+      status:          pm.status,
+      inspector:       pm.inspector,
+      pdfFile:     '',
+      checklist:   [],
+      overallNotes:'',
+      overallImages:[],
+      createdAt:   new Date().toISOString(),
+      submittedAt: ''
+    };
+  }
+
+  renderAuditForm();
+  document.getElementById('auditFormCard').style.display = '';
+  document.getElementById('auditFormCard').scrollIntoView({ behavior:'smooth', block:'start' });
+  renderPMList(); // refresh selected highlight
+}
+
+function closeAuditForm() {
+  _currentAudit = null;
+  state.selectedPmIdx = null;
+  document.getElementById('auditFormCard').style.display = 'none';
+  document.getElementById('checklistSection').style.display = 'none';
+  renderPMList();
+}
+
+function renderAuditForm() {
+  if (!_currentAudit) return;
+  var a = _currentAudit;
+
+  // Status badge
+  var badgeEl = document.getElementById('auditStatusBadge');
+  badgeEl.innerHTML = '<span class="status-badge '+(a.auditStatus==='Submitted'?'badge-submitted':'badge-draft')+'">'+a.auditStatus+'</span>';
+
+  // PM Info grid
+  var infoItems = [
+    {l:'Order',                    v: a.order},
+    {l:'Description',              v: a.desc},
+    {l:'Functional Location',      v: a.fl},
+    {l:'Description of FL',        v: a.descFL},
+    {l:'Due Date',                  v: a.basicFinishDate},
+    {l:'Closed Date',              v: a.finishDate},
+    {l:'Technician (Last Changed By)', v: a.tech},
+    {l:'Work Center',              v: a.wc},
+    {l:'System Status',            v: a.status},
+    {l:'Inspector',                v: a.inspector},
+    {l:'Auditor',                  v: a.auditorName || state.auditorName},
+    {l:'Audit Date',               v: a.auditDate}
+  ];
+  document.getElementById('pmInfoGrid').innerHTML = infoItems.map(function(it){
+    return '<div class="info-item"><div class="info-lbl">'+esc(it.l)+'</div><div class="info-val">'+esc(it.v||'—')+'</div></div>';
+  }).join('');
+
+  // Populate PDF dropdown
+  populatePdfDropdown(a.pdfFile);
+
+  // If checklist exists, render it
+  if (a.checklist && a.checklist.length) {
+    document.getElementById('overallNotes').value = a.overallNotes || '';
+    renderChecklist();
+    document.getElementById('checklistSection').style.display = '';
+  } else {
+    document.getElementById('checklistSection').style.display = 'none';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Folder Access (FS Access API + IndexedDB for handle persistence)
+// ════════════════════════════════════════════════════════════════════════════
+var DIR_DB = 'pmAuditDir_v1', DIR_STORE = 'handles';
+var _auditDirHandle = null;
+var _pmPdfDirHandle = null;
+
+function _openDirDB() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(DIR_DB, 1);
+    req.onupgradeneeded = function(e) {
+      if (!e.target.result.objectStoreNames.contains(DIR_STORE))
+        e.target.result.createObjectStore(DIR_STORE);
+    };
+    req.onsuccess = function() { resolve(req.result); };
+    req.onerror   = function() { reject(req.error); };
+  });
+}
+async function _idbSet(key, val) {
+  var db = await _openDirDB();
+  return new Promise(function(res, rej) {
+    var tx = db.transaction(DIR_STORE,'readwrite');
+    var r  = tx.objectStore(DIR_STORE).put(val, key);
+    r.onsuccess = function(){ res(true); };
+    r.onerror   = function(){ rej(r.error); };
+  });
+}
+async function _idbGet(key) {
+  var db = await _openDirDB();
+  return new Promise(function(res, rej) {
+    var tx = db.transaction(DIR_STORE,'readonly');
+    var r  = tx.objectStore(DIR_STORE).get(key);
+    r.onsuccess = function(){ res(r.result || null); };
+    r.onerror   = function(){ rej(r.error); };
+  });
+}
+async function _idbDel(key) {
+  var db = await _openDirDB();
+  return new Promise(function(res, rej) {
+    var tx = db.transaction(DIR_STORE,'readwrite');
+    var r  = tx.objectStore(DIR_STORE).delete(key);
+    r.onsuccess = function(){ res(true); };
+    r.onerror   = function(){ rej(r.error); };
+  });
+}
+async function _verifyPerm(handle, write) {
+  if (!handle || typeof handle.queryPermission !== 'function') return false;
+  var opts = { mode: write ? 'readwrite' : 'read' };
+  var p = await handle.queryPermission(opts);
+  if (p === 'granted') return true;
+  p = await handle.requestPermission(opts);
+  return p === 'granted';
+}
+
+async function pickAuditFolder() {
+  if (typeof window.showDirectoryPicker !== 'function') {
+    toast('Folder picker requires Microsoft Edge or Google Chrome.', 'err');
+    return;
+  }
+  try {
+    var h = await window.showDirectoryPicker({ mode:'readwrite' });
+    _auditDirHandle = h;
+    _pmPdfDirHandle = null; // reset subfolder cache
+    await _idbSet('auditDir', h);
+    state.folderName = h.name;
+    saveState();
+    renderFolderCard();
+    await loadAvailablePdfs();
+    toast('Folder linked: ' + h.name, 'ok');
+  } catch(e) {
+    if (e && e.name === 'AbortError') return;
+    toast('Could not open folder: ' + (e.message||e), 'err');
+  }
+}
+async function unlinkAuditFolder() {
+  if (!confirm('Unlink the audit folder? Your saved audit data stays.')) return;
+  _auditDirHandle = null; _pmPdfDirHandle = null;
+  await _idbDel('auditDir');
+  state.folderName = '';
+  state.availablePdfs = [];
+  saveState();
+  renderFolderCard();
+  toast('Folder unlinked', 'ok');
+}
+function renderFolderCard() {
+  var nameEl   = document.getElementById('folderNameEl');
+  var unlinkBtn= document.getElementById('unlinkBtn');
+  if (!nameEl) return;
+  if (state.folderName) {
+    nameEl.className = 'folder-name';
+    nameEl.textContent = '📂 ' + state.folderName;
+    if (unlinkBtn) unlinkBtn.style.display = 'inline-block';
+  } else {
+    nameEl.className = 'folder-none';
+    nameEl.textContent = 'No folder linked yet';
+    if (unlinkBtn) unlinkBtn.style.display = 'none';
+  }
+}
+
+async function _ensureDirHandle() {
+  if (_auditDirHandle && await _verifyPerm(_auditDirHandle, false)) return true;
+  try {
+    var h = await _idbGet('auditDir');
+    if (!h) return false;
+    _auditDirHandle = h;
+    return await _verifyPerm(_auditDirHandle, false);
+  } catch(e) { return false; }
+}
+
+async function _getPmPdfDir() {
+  if (_pmPdfDirHandle) return _pmPdfDirHandle;
+  // Always verify/request permission before touching the handle
+  if (!await _ensureDirHandle()) return null;
+  try {
+    var names = ['PM PDF', 'pm pdf', 'PMPDF', 'PmPdf', 'pm_pdf', 'PMpdf'];
+    for (var i = 0; i < names.length; i++) {
+      try {
+        var h = await _auditDirHandle.getDirectoryHandle(names[i], { create:false });
+        _pmPdfDirHandle = h;
+        return h;
+      } catch(e2) { /* try next name */ }
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function loadAvailablePdfs() {
+  var pdfs = new Set();
+
+  // Source 1: linked audit folder (desktop)
+  if (await _ensureDirHandle()) {
+    var pmDir = await _getPmPdfDir();
+    if (pmDir) {
+      try {
+        for await (var entry of pmDir.values()) {
+          if (entry.kind === 'file' && /\.pdf$/i.test(entry.name)) pdfs.add(entry.name);
+        }
+      } catch(e) {}
+    }
+  }
+
+  // Source 2: IDB library (mobile / imported PDFs)
+  try {
+    var idbKeys = await _pdfIdbKeys();
+    idbKeys.forEach(function(fn){ pdfs.add(fn); });
+  } catch(e) {}
+
+  state.availablePdfs = Array.from(pdfs).sort();
+  saveState();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PDF dropdown + fuzzy match
+// ════════════════════════════════════════════════════════════════════════════
+function fuzzyMatchPdf(description, pdfFilenames) {
+  if (!description || !pdfFilenames.length) return null;
+  var IGNORE = { the:1, and:1, for:1, with:1, from:1, into:1, over:1, type:1, that:1, are:1 };
+  function words(s) {
+    return s.toLowerCase().replace(/[_\-\/]/g,' ').replace(/[^a-z0-9 ]/g,'')
+      .split(/\s+/).filter(function(w){ return w.length > 2 && !IGNORE[w]; });
+  }
+  var descW = words(description);
+  var best = null, bestScore = 0;
+  pdfFilenames.forEach(function(fn) {
+    var clean = fn.replace(/^\d+\s+/,'').replace(/\.pdf$/i,'');
+    var pdfW = words(clean);
+    var overlap = descW.filter(function(w){ return pdfW.indexOf(w) >= 0; }).length;
+    var score = overlap / Math.max(descW.length, pdfW.length, 1);
+    if (score > bestScore) { bestScore = score; best = fn; }
+  });
+  return (bestScore > 0.15 && best) ? best : null;
+}
+
+async function populatePdfDropdown(currentPdf) {
+  var sel = document.getElementById('pdfSelect');
+  var warn= document.getElementById('pdfFolderWarn');
+  var hint= document.getElementById('pdfMatchHint');
+
+  // Refresh PDF list from folder
+  if (await _ensureDirHandle()) {
+    await loadAvailablePdfs();
+    warn.style.display = 'none';
+  } else {
+    warn.style.display = '';
+  }
+
+  var pdfs = state.availablePdfs || [];
+
+  if (!pdfs.length) {
+    sel.innerHTML = '<option value="">-- no PDFs found (link folder first) --</option>';
+    hint.className = 'pdf-nomatch-hint';
+    hint.textContent = '⚠ Link the PM PDF folder (see yellow box below) then the list will appear.';
+    return;
+  }
+
+  sel.innerHTML = '<option value="">-- select PM reference PDF --</option>'
+    + pdfs.map(function(fn){ return '<option value="'+esc(fn)+'">'+esc(fn)+'</option>'; }).join('');
+
+  var matched = currentPdf || fuzzyMatchPdf(_currentAudit ? _currentAudit.desc : '', pdfs);
+  if (matched && pdfs.indexOf(matched) >= 0) {
+    sel.value = matched;
+    if (!currentPdf) {
+      hint.className = 'pdf-match-hint';
+      hint.textContent = '✓ Auto-matched by description — confirm or change';
+    } else {
+      hint.textContent = '';
+    }
+  } else {
+    hint.className = 'pdf-nomatch-hint';
+    hint.textContent = '⚠ No auto-match found — please select the correct PDF';
+  }
+}
+
+function onPdfSelected() {
+  var val = document.getElementById('pdfSelect').value;
+  if (_currentAudit) _currentAudit.pdfFile = val;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// pdf.js lazy load + PDF text extraction
+// ════════════════════════════════════════════════════════════════════════════
+async function ensurePdfJs() {
+  if (window.pdfjsLib) return;
+  // Load main pdf.js library
+  await new Promise(function(resolve, reject) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = resolve;
+    s.onerror = function() { reject(new Error('Could not load pdf.js — internet connection required.')); };
+    document.head.appendChild(s);
+  });
+  // Fetch worker as a Blob URL to bypass CORS restrictions on file:// origins
+  try {
+    var resp = await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var code = await resp.text();
+    var blob = new Blob([code], { type: 'application/javascript' });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+  } catch(e) {
+    // Fallback: direct URL (works in some browsers even on file://)
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    console.warn('pdf.js worker blob failed, using CDN URL directly:', e.message);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PDF Library — IndexedDB storage so PDFs work on mobile without folder access
+// ════════════════════════════════════════════════════════════════════════════
+var PDF_DB = 'pmAuditPdfLib_v1', PDF_STORE = 'pdfs';
+function _openPdfDB() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(PDF_DB, 1);
+    req.onupgradeneeded = function(e) {
+      if (!e.target.result.objectStoreNames.contains(PDF_STORE))
+        e.target.result.createObjectStore(PDF_STORE);
+    };
+    req.onsuccess = function() { resolve(req.result); };
+    req.onerror   = function() { reject(req.error); };
+  });
+}
+async function _pdfIdbSet(key, val) {
+  var db = await _openPdfDB();
+  return new Promise(function(res, rej) {
+    var tx = db.transaction(PDF_STORE,'readwrite');
+    var r  = tx.objectStore(PDF_STORE).put(val, key);
+    r.onsuccess = function(){ res(true); };
+    r.onerror   = function(){ rej(r.error); };
+  });
+}
+async function _pdfIdbGet(key) {
+  var db = await _openPdfDB();
+  return new Promise(function(res, rej) {
+    var tx = db.transaction(PDF_STORE,'readonly');
+    var r  = tx.objectStore(PDF_STORE).get(key);
+    r.onsuccess = function(){ res(r.result || null); };
+    r.onerror   = function(){ rej(r.error); };
+  });
+}
+async function _pdfIdbKeys() {
+  var db = await _openPdfDB();
+  return new Promise(function(res, rej) {
+    var tx = db.transaction(PDF_STORE,'readonly');
+    var r  = tx.objectStore(PDF_STORE).getAllKeys();
+    r.onsuccess = function(){ res(r.result || []); };
+    r.onerror   = function(){ rej(r.error); };
+  });
+}
+async function _pdfIdbDel(key) {
+  var db = await _openPdfDB();
+  return new Promise(function(res, rej) {
+    var tx = db.transaction(PDF_STORE,'readwrite');
+    var r  = tx.objectStore(PDF_STORE).delete(key);
+    r.onsuccess = function(){ res(true); };
+    r.onerror   = function(){ rej(r.error); };
+  });
+}
+
+async function onPdfFilesImported(event) {
+  var files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  var count = 0;
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    if (!/\.pdf$/i.test(file.name)) continue;
+    try {
+      var buf = await file.arrayBuffer();
+      await _pdfIdbSet(file.name, buf);
+      count++;
+    } catch(e) { console.warn('Failed to store', file.name, e); }
+  }
+  toast(count + ' PDF' + (count !== 1 ? 's' : '') + ' imported to app library', 'ok');
+  await _mergeAvailablePdfs();
+  renderIdbPdfList();
+  event.target.value = '';
+}
+async function renderIdbPdfList() {
+  var el = document.getElementById('idbPdfList');
+  if (!el) return;
+  var keys = await _pdfIdbKeys().catch(function(){ return []; });
+  if (!keys.length) {
+    el.innerHTML = '<div class="empty" style="padding:8px 0">No PDFs imported yet.</div>';
+    return;
+  }
+  el.innerHTML = keys.sort().map(function(fn) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bdr)">'
+      + '<span style="flex:1;font-size:12px;font-family:monospace;word-break:break-all">📄 '+esc(fn)+'</span>'
+      + '<button class="btn btn-danger btn-xs" onclick="deleteIdbPdf(\''+esc(fn).replace(/'/g,"\\'") +'\')">✕</button>'
+    + '</div>';
+  }).join('');
+}
+async function deleteIdbPdf(filename) {
+  if (!confirm('Remove ' + filename + ' from app library?')) return;
+  await _pdfIdbDel(filename);
+  await _mergeAvailablePdfs();
+  renderIdbPdfList();
+  toast('Removed ' + filename, 'ok');
+}
+async function _mergeAvailablePdfs() {
+  await loadAvailablePdfs();
+  if (_currentAudit) populatePdfDropdown(_currentAudit.pdfFile);
+}
+
+// ── Step 1: load raw text items from every page (Y flipped: 0 = top) ────────
+async function _loadPdfItems(filename) {
+  var buf = null;
+
+  // 1. Try the linked folder (desktop)
+  if (_auditDirHandle) {
+    try {
+      var pmDir = await _getPmPdfDir();
+      if (pmDir) {
+        var fh2 = await pmDir.getFileHandle(filename, { create: false });
+        buf = await (await fh2.getFile()).arrayBuffer();
+      }
+    } catch(e) { /* fall through */ }
+  }
+
+  // 2. Fall back to IDB library (mobile / imported)
+  if (!buf) buf = await _pdfIdbGet(filename);
+
+  if (!buf) throw new Error('PDF "' + filename + '" not found. Go to Settings → PDF Library to import it on this device.');
+  await ensurePdfJs();
+  var pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+  var all = [];
+  for (var p = 1; p <= pdf.numPages; p++) {
+    var page    = await pdf.getPage(p);
+    var vp      = page.getViewport({ scale: 1 });
+    var yBase   = (p - 1) * (vp.height + 60); // offset each page so they don't overlap
+    var content = await page.getTextContent();
+    content.items.forEach(function(item) {
+      if (item.str !== undefined && item.str !== '') {
+        all.push({
+          x:   item.transform[4],
+          y:   yBase + (vp.height - item.transform[5]), // flip: Y=0 at top
+          str: item.str
+        });
+      }
+    });
+  }
+  all.sort(function(a, b) { return a.y - b.y; }); // top → bottom
+  return all;
+}
+
+// Extract text items from a raw PDF ArrayBuffer (no folder access needed)
+async function _parsePdfBuffer(buf) {
+  await ensurePdfJs();
+  var pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+  var all = [];
+  for (var p = 1; p <= pdf.numPages; p++) {
+    var page    = await pdf.getPage(p);
+    var vp      = page.getViewport({ scale: 1 });
+    var yBase   = (p - 1) * (vp.height + 60);
+    var content = await page.getTextContent();
+    content.items.forEach(function(item) {
+      if (item.str !== undefined && item.str !== '') {
+        all.push({
+          x:   item.transform[4],
+          y:   yBase + (vp.height - item.transform[5]),
+          str: item.str
+        });
+      }
+    });
+  }
+  all.sort(function(a, b) { return a.y - b.y; });
+  return all;
+}
+
+// Parse a ZIP file and build the Brain from every PDF inside it
+async function importZipAndBuild(file, onProgress) {
+  await ensureJSZip();
+  await ensurePdfJs();
+  var zip = await JSZip.loadAsync(file);
+  var pdfEntries = [];
+  zip.forEach(function(relPath, entry) {
+    if (!entry.dir && /\.pdf$/i.test(relPath)) pdfEntries.push({ name: entry.name, entry: entry });
+  });
+  if (!pdfEntries.length) throw new Error('No PDF files found inside the ZIP.');
+
+  var baked = 0, failed = 0;
+  for (var i = 0; i < pdfEntries.length; i++) {
+    var fn = pdfEntries[i].name;
+    var baseName = fn.split('/').pop(); // strip any folder path inside ZIP
+    if (onProgress) onProgress(i, pdfEntries.length, baseName);
+    try {
+      var buf = await pdfEntries[i].entry.async('arraybuffer');
+      var items = await _parsePdfBuffer(buf);
+      var bestScore = -1, bestOps = [];
+      [4, 6, 8, 11, 14, 18].forEach(function(gap) {
+        var ops = parsePdfChecklist(_reconstructText(items, gap));
+        var score = ops.reduce(function(s, op){ return s + op.items.length; }, 0);
+        if (score > bestScore) { bestScore = score; bestOps = ops; }
+      });
+      if (bestOps.length) { _brain[baseName] = bestOps; baked++; }
+      else { failed++; }
+    } catch(e) { console.warn('ZIP bake skip:', baseName, e.message); failed++; }
+  }
+  if (onProgress) onProgress(pdfEntries.length, pdfEntries.length, 'Saving…');
+  saveBrain();
+  try { localStorage.setItem(BRAIN_KEY + '_ts', new Date().toLocaleString()); } catch(e) {}
+  return { baked: baked, failed: failed, total: pdfEntries.length };
+}
+
+function triggerZipBrainImport() {
+  document.getElementById('zipBrainInput').value = '';
+  document.getElementById('zipBrainInput').click();
+}
+
+async function onZipBrainSelected(event) {
+  var file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  _startZipImport(file);
+}
+
+// Called from onboarding or settings — handles progress UI
+async function _startZipImport(file, fromOnboard) {
+  // Show progress phase in onboarding, or use toast for settings
+  if (fromOnboard) {
+    document.getElementById('onboardPhase1').style.display = 'none';
+    document.getElementById('onboardPhase2').style.display = '';
+    document.getElementById('onboardFile').textContent = 'Loading libraries…';
+  } else {
+    toast('Importing ZIP — please wait…', 'ok');
+  }
+
+  function setProgress(i, total, filename) {
+    var pct = total ? Math.round(i / total * 100) : 0;
+    if (fromOnboard) {
+      document.getElementById('onboardBar').style.width = pct + '%';
+      document.getElementById('onboardPct').textContent = pct + '%  (' + i + ' / ' + total + ')';
+      document.getElementById('onboardFile').textContent = filename || '';
+    }
+  }
+
+  try {
+    var result = await importZipAndBuild(file, setProgress);
+    renderBrainStatus();
+    if (fromOnboard) {
+      document.getElementById('onboardPhase2').style.display = 'none';
+      document.getElementById('onboardPhase3').style.display = '';
+      document.getElementById('onboardCount').textContent = result.baked;
+    } else {
+      var msg = '✅ ' + result.baked + ' checklist' + (result.baked !== 1 ? 's' : '') + ' imported from ZIP';
+      if (result.failed) msg += ' (' + result.failed + ' could not be read)';
+      toast(msg, 'ok');
+    }
+  } catch(e) {
+    if (fromOnboard) {
+      document.getElementById('onboardFile').textContent = '⚠ ' + e.message;
+    } else {
+      toast('ZIP import failed: ' + e.message, 'err');
+    }
+  }
+}
+
+// ── Step 2: group items into lines with a given vertical gap ─────────────────
+function _reconstructText(items, gap) {
+  var groups = [], cur = null;
+  items.forEach(function(item) {
+    if (!cur || Math.abs(item.y - cur.y) > gap) {
+      cur = { y: item.y, items: [] };
+      groups.push(cur);
+    }
+    cur.items.push(item);
+  });
+  var lines = [];
+  groups.forEach(function(g) {
+    g.items.sort(function(a, b) { return a.x - b.x; });
+    var s = g.items.map(function(it) { return it.str; }).join(' ');
+    if (s.trim()) lines.push(s);
+  });
+  return lines.join('\n');
+}
+
+// ── Keep this for legacy callers ─────────────────────────────────────────────
+async function extractPdfText(filename) {
+  var items = await _loadPdfItems(filename);
+  return _reconstructText(items, 10);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PDF checklist parser
+// ════════════════════════════════════════════════════════════════════════════
+function parsePdfChecklist(fullText) {
+  var lines = fullText.split('\n');
+  var operations = [];
+  var curOp = null, curItem = null, curBodyLines = [];
+
+  var SKIP = /^(Work\s+center|Control\s+key|Number\s+of\s+persons|Work\s+[\d.]+|Duration\s+[\d.]+|MntPack\.|Strategy\s|Usage\s|Plant\s|ConstType|Status\s+\d|Task\s+List\s+Print|SAP|Page\s+\d|Task\s+list\s+\d|PRT\s|Item\s+\d|Quantity\s|Cat\.\s)/i;
+  var DATE_RE = /^\d{2}\/\d{2}\/\d{4}/;
+  var META_RE = /^(BM_|PM0[019]|MIN\s*$|\d+\.\d+\s+MIN|\d+\s+MIN\s*$)/i;
+
+  function norm(s) { return String(s||'').replace(/\s{2,}/g, ' ').trim(); }
+
+  // When moving to a new op, if the previous one had NO numbered steps,
+  // promote its body lines as a single checklist item (point-per-op format).
+  function finalizeOp() {
+    if (!curOp || curOp.items.length > 0) return;
+    var title = norm(curOp.title || '');
+    if (!title || title === '(no title)') return;
+    var notes = curBodyLines.map(norm).filter(function(l){ return l.length > 1; });
+    curOp.items.push({ num: '1', text: title, notes: notes });
+  }
+
+  lines.forEach(function(rawLine) {
+    var trimmed = rawLine.trim();
+    if (!trimmed) return;
+    if (DATE_RE.test(trimmed)) return;
+    if (SKIP.test(trimmed)) return;
+    if (META_RE.test(trimmed)) return;
+    if (/^\d{1,3}$/.test(trimmed)) return; // lone page numbers
+
+    // ── Operation header ──────────────────────────────────────────────────
+    var opM = rawLine.match(/\bOperation\s+(\d{3,4})\b\s*(.*)/);
+    if (opM) {
+      finalizeOp();
+      var title = norm(opM[2]);
+      curOp        = { opNum: opM[1], title: title, items: [] };
+      curItem      = null;
+      curBodyLines = [];
+      operations.push(curOp);
+      return;
+    }
+
+    if (!curOp) return;
+
+    // ── Skip repeated operation title ─────────────────────────────────────
+    if (!curOp.items.length) {
+      var clean      = norm(trimmed).replace(/:$/, '').toLowerCase();
+      var titleClean = norm(curOp.title).replace(/:$/, '').toLowerCase();
+      if (clean === titleClean ||
+          (titleClean && titleClean.startsWith(clean)) ||
+          (clean && titleClean && clean.startsWith(titleClean.slice(0, 12)))) {
+        if (!curOp.title) curOp.title = norm(trimmed);
+        return;
+      }
+      // No title yet — first real line becomes the title
+      if (!curOp.title && !trimmed.match(/^(\d{1,2})\s*[.)]/) && !trimmed.match(/^[*•]+/)) {
+        curOp.title = norm(trimmed);
+        return;
+      }
+    }
+
+    // ── Numbered step: "1. text" or "1)text" ──────────────────────────────
+    var stepM = trimmed.match(/^(\d{1,2})\s*[.)]\s*(.+)/);
+    if (stepM) {
+      curItem = { num: stepM[1], text: norm(stepM[2]), notes: [] };
+      curOp.items.push(curItem);
+      return;
+    }
+
+    // ── Asterisk / note line: "*" or "**" ─────────────────────────────────
+    var noteM = trimmed.match(/^[*•]+\s*(.+)/);
+    if (noteM) {
+      var nt = noteM[1].replace(/[*•]+$/, '').trim();
+      if (nt) {
+        if (curItem) curItem.notes.push(norm(nt));
+        else         curBodyLines.push('Note: ' + norm(nt));
+      }
+      return;
+    }
+
+    // ── Continuation of last sub-note (line wrap) ─────────────────────────
+    if (curItem && curItem.notes.length > 0 && trimmed.length > 2 &&
+        !SKIP.test(trimmed) && !trimmed.match(/^(\d{1,2})\s*[.)]/) && !trimmed.match(/^[*•]+/)) {
+      curItem.notes[curItem.notes.length - 1] =
+        norm(curItem.notes[curItem.notes.length - 1] + ' ' + trimmed);
+      return;
+    }
+
+    // ── Body line (point-per-op format: description with no step numbers) ──
+    if (curOp.items.length === 0 && !curItem) {
+      var body = norm(trimmed).replace(/[*•]+/g, '').trim();
+      if (body.length > 2) curBodyLines.push(body);
+    }
+  });
+
+  finalizeOp(); // close the last operation
+
+  return operations.filter(function(op){ return op.items.length > 0; });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Build + render checklist
+// ════════════════════════════════════════════════════════════════════════════
+async function loadChecklist() {
+  if (!_currentAudit) return;
+  var pdfFile = document.getElementById('pdfSelect').value;
+  if (!pdfFile) { toast('Please select a reference PDF first', 'err'); return; }
+
+  // Warn if overwriting existing checklist data
+  if (_currentAudit.checklist && _currentAudit.checklist.length) {
+    if (!confirm('This will replace the existing checklist. Continue?')) return;
+  }
+
+  _currentAudit.pdfFile = pdfFile;
+  try {
+    // ── Priority 1: use baked Brain data (instant, no file access needed) ──
+    if (_brain[pdfFile] && _brain[pdfFile].length) {
+      var ops = _brain[pdfFile];
+      _currentAudit.checklist = ops.map(function(op) {
+        return {
+          opNum: op.opNum, opTitle: op.title, status: null,
+          items: op.items.map(function(it) {
+            return { num: it.num, text: it.text, notes: it.notes || [], checked: false, comment: '', images: [], expanded: false };
+          })
+        };
+      });
+      document.getElementById('overallNotes').value = _currentAudit.overallNotes || '';
+      renderChecklist();
+      document.getElementById('checklistSection').style.display = '';
+      toast('Checklist loaded from brain — ' + ops.length + ' operations', 'ok');
+      return;
+    }
+
+    // ── Priority 2: load and parse the PDF (folder → IDB fallback) ──
+    toast('Loading PDF…');
+    await _ensureDirHandle().catch(function(){});
+
+    var hasFolderAccess = !!_auditDirHandle;
+    var idbKeys = await _pdfIdbKeys().catch(function(){ return []; });
+    var inIdb   = idbKeys.indexOf(pdfFile) >= 0;
+
+    if (!hasFolderAccess && !inIdb) {
+      if (typeof window.showDirectoryPicker === 'function') {
+        toast('No PDF folder linked. Asking you to pick it now…', 'err');
+        await pickAuditFolder();
+        if (!_auditDirHandle) {
+          toast('⚠ Folder not linked — go to Settings → PDF Brain and click Build into App first.', 'err');
+          return;
+        }
+      } else {
+        toast('⚠ Go to Settings → 🧠 PDF Brain and click "Build into App" first.', 'err');
+        return;
+      }
+    }
+
+    var pdfItems = await _loadPdfItems(pdfFile);
+    var ops = [], bestText = '', bestScore = -1;
+    var gapsToTry = [4, 6, 8, 11, 14, 18];
+    gapsToTry.forEach(function(gap) {
+      var txt  = _reconstructText(pdfItems, gap);
+      var cOps = parsePdfChecklist(txt);
+      var score = cOps.reduce(function(s, op) { return s + op.items.length; }, 0);
+      if (score > bestScore) { bestScore = score; ops = cOps; bestText = txt; }
+    });
+    console.log('[PM Audit] Best parse — ops:', ops.length, 'steps:', bestScore, '\n', bestText.slice(0, 3000));
+
+    if (!ops.length) {
+      openPdfDebugModal(bestText || _reconstructText(pdfItems, 8));
+      toast('⚠ No steps found. A debug window opened — share that text to get the parser fixed.', 'err');
+      return;
+    }
+    _currentAudit.checklist = ops.map(function(op) {
+      return {
+        opNum:   op.opNum,
+        opTitle: op.title,
+        status:  null,   // null | 'ok' | 'nok'
+        items:   op.items.map(function(it) {
+          return { num: it.num, text: it.text, notes: it.notes, checked: false, comment: '', images: [], expanded: false };
+        })
+      };
+    });
+    document.getElementById('overallNotes').value = _currentAudit.overallNotes || '';
+    renderChecklist();
+    document.getElementById('checklistSection').style.display = '';
+    toast('Checklist built from ' + pdfFile + ' — ' + ops.length + ' operations', 'ok');
+  } catch(e) {
+    console.error(e);
+    toast('Failed to load PDF: ' + e.message, 'err');
+  }
+}
+
+function renderChecklist() {
+  if (!_currentAudit || !_currentAudit.checklist) return;
+  var cl = _currentAudit.checklist;
+
+  var html = cl.map(function(op, oi) {
+    var isOk  = op.status === 'ok';
+    var isNok = op.status === 'nok';
+    var opDone = op.items.filter(function(it){ return it.checked; }).length;
+    var secCls = 'op-section' + (isOk ? ' op-ok' : isNok ? ' op-nok' : '');
+
+    var opItems = op.items.map(function(it, ii) {
+      var notesHtml = it.notes && it.notes.length
+        ? '<div class="step-notes">' + it.notes.map(function(n){
+            return '<div class="step-note-line">'+esc(n)+'</div>';
+          }).join('') + '</div>'
+        : '';
+      var imgs = (it.images||[]).map(function(img, imgIdx){
+        return '<div style="display:inline-flex;align-items:center;gap:4px">'
+          + '<img class="img-thumb" src="'+img+'" onclick="openImageViewer(\''+img+'\',\'Step '+it.num+'\')">'
+          + '<button class="img-remove" onclick="event.stopPropagation();removeStepImage('+oi+','+ii+','+imgIdx+')">×</button>'
+          + '</div>';
+      }).join('');
+      var isExp = it.expanded || false;
+      return '<div class="cl-item'+(it.checked?' checked':'')+(isExp?' expanded':'')+'" id="cl-'+oi+'-'+ii+'" onclick="toggleStep('+oi+','+ii+')">'
+        + '<div class="cl-item-hdr">'
+        +   '<input type="checkbox" id="step-cb-'+oi+'-'+ii+'"'+(it.checked?' checked':'')+' onclick="event.stopPropagation()" onchange="onCheck('+oi+','+ii+',this.checked)">'
+        +   '<span class="step-num">'+esc(it.num)+'.</span>'
+        +   '<span class="step-txt'+(it.checked?' done':'')+'">'+esc(it.text)+'</span>'
+        +   '<span class="step-arrow">▼</span>'
+        + '</div>'
+        + '<div class="cl-item-body" style="'+(isExp?'display:block':'display:none')+'">'
+        +   notesHtml
+        +   '<div class="step-extra">'
+        +     '<textarea class="form-textarea step-comment" placeholder="Notes / findings for this step..." '
+        +       'onclick="event.stopPropagation()" oninput="event.stopPropagation();onStepComment('+oi+','+ii+',this.value)" '
+        +       'style="min-height:44px;font-size:12px">'+esc(it.comment||'')+'</textarea>'
+        +     '<div class="step-img-row" id="step-img-row-'+oi+'-'+ii+'">'
+        +       imgs
+        +       '<button class="btn btn-secondary btn-xs" onclick="event.stopPropagation();triggerImagePicker(\'step\','+oi+','+ii+')">📷 Add photo</button>'
+        +       '<button class="btn btn-secondary btn-xs" onclick="event.stopPropagation();openCameraFor(\'step\','+oi+','+ii+')">📸 Camera</button>'
+        +     '</div>'
+        +   '</div>'
+        + '</div>'
+      + '</div>';
+    }).join('');
+
+    return '<div class="'+secCls+'" id="op-sec-'+oi+'">'
+      + '<div class="op-hdr">'
+      +   '<span class="op-num-badge">Op '+esc(op.opNum)+'</span>'
+      +   '<span class="op-title-text">'+esc(op.opTitle)+'</span>'
+      +   '<div class="op-verdict">'
+      +     '<button class="btn-ok'+(isOk?' active':'')+'" onclick="event.stopPropagation();setOpStatus('+oi+',\'ok\')">✓ OK</button>'
+      +     '<button class="btn-nok'+(isNok?' active':'')+'" onclick="event.stopPropagation();setOpStatus('+oi+',\'nok\')">✗ NOK</button>'
+      +   '</div>'
+      +   '<span class="op-complete" id="op-prog-'+oi+'">'+opDone+'/'+op.items.length+'</span>'
+      + '</div>'
+      + '<div class="op-items" id="op-items-'+oi+'" style="'+(isOk?'display:none':'')+'">'
+      +   opItems
+      + '</div>'
+    + '</div>';
+  }).join('');
+
+  document.getElementById('checklistBody').innerHTML = html;
+  updateChecklistProgress();
+  renderOverallImages();
+}
+
+// ── OK / NOK verdict for a whole operation ───────────────────────────────
+function setOpStatus(opIdx, newStatus) {
+  if (!_currentAudit) return;
+  var op = _currentAudit.checklist[opIdx];
+  // Toggle: clicking active status again clears it
+  op.status = (op.status === newStatus) ? null : newStatus;
+
+  if (op.status === 'ok') {
+    // Auto-check all steps and collapse them
+    op.items.forEach(function(it){ it.checked = true; it.expanded = false; });
+  } else if (op.status === 'nok') {
+    // Expand all steps for individual review
+    op.items.forEach(function(it){ it.expanded = true; });
+  } else {
+    // Cleared — collapse all
+    op.items.forEach(function(it){ it.expanded = false; });
+  }
+
+  var secEl = document.getElementById('op-sec-' + opIdx);
+  var itemsEl = document.getElementById('op-items-' + opIdx);
+  if (secEl) {
+    secEl.className = 'op-section' + (op.status === 'ok' ? ' op-ok' : op.status === 'nok' ? ' op-nok' : '');
+    secEl.querySelector('.btn-ok').classList.toggle('active', op.status === 'ok');
+    secEl.querySelector('.btn-nok').classList.toggle('active', op.status === 'nok');
+  }
+  // If a verdict was just set, check if all ops are now done and hide the banner
+  if (op.status) {
+    var stillIncomplete = _currentAudit.checklist.filter(function(o){ return o.status !== 'ok' && o.status !== 'nok'; });
+    if (!stillIncomplete.length) document.getElementById('submitValidationErr').style.display = 'none';
+  }
+  if (itemsEl) {
+    itemsEl.style.display = (op.status === 'ok') ? 'none' : '';
+    // Update each step's UI
+    op.items.forEach(function(it, ii) {
+      var cb = document.getElementById('step-cb-' + opIdx + '-' + ii);
+      if (cb) cb.checked = it.checked;
+      var el = document.getElementById('cl-' + opIdx + '-' + ii);
+      if (el) {
+        el.classList.toggle('checked', it.checked);
+        el.classList.toggle('expanded', it.expanded);
+        var txt = el.querySelector('.step-txt'); if (txt) txt.classList.toggle('done', it.checked);
+        var body = el.querySelector('.cl-item-body'); if (body) body.style.display = it.expanded ? 'block' : 'none';
+        var arrow = el.querySelector('.step-arrow'); if (arrow) arrow.style.transform = it.expanded ? 'rotate(180deg)' : '';
+      }
+    });
+  }
+  updateOpProgress(opIdx);
+  updateChecklistProgress();
+}
+
+// ── Toggle individual step expand / collapse ─────────────────────────────
+function toggleStep(opIdx, stepIdx) {
+  if (!_currentAudit) return;
+  var op = _currentAudit.checklist[opIdx];
+  if (op.status === 'ok') return; // can't expand individual steps when op is OK
+  var item = op.items[stepIdx];
+  item.expanded = !item.expanded;
+  var el = document.getElementById('cl-' + opIdx + '-' + stepIdx);
+  if (el) {
+    el.classList.toggle('expanded', item.expanded);
+    var body = el.querySelector('.cl-item-body'); if (body) body.style.display = item.expanded ? 'block' : 'none';
+    var arrow = el.querySelector('.step-arrow'); if (arrow) arrow.style.transform = item.expanded ? 'rotate(180deg)' : '';
+  }
+}
+
+function onCheck(opIdx, stepIdx, checked) {
+  if (!_currentAudit) return;
+  _currentAudit.checklist[opIdx].items[stepIdx].checked = checked;
+  var el = document.getElementById('cl-'+opIdx+'-'+stepIdx);
+  if (el) {
+    el.classList.toggle('checked', checked);
+    var txt = el.querySelector('.step-txt'); if (txt) txt.classList.toggle('done', checked);
+  }
+  updateOpProgress(opIdx);
+  updateChecklistProgress();
+}
+function onStepComment(opIdx, stepIdx, value) {
+  if (!_currentAudit) return;
+  _currentAudit.checklist[opIdx].items[stepIdx].comment = value;
+}
+function onOverallNotesChange() {
+  if (!_currentAudit) return;
+  _currentAudit.overallNotes = document.getElementById('overallNotes').value;
+}
+function updateOpProgress(opIdx) {
+  var op = _currentAudit.checklist[opIdx];
+  var done = op.items.filter(function(it){ return it.checked; }).length;
+  var el = document.getElementById('op-prog-' + opIdx);
+  if (el) el.textContent = done + '/' + op.items.length;
+}
+function updateChecklistProgress() {
+  if (!_currentAudit) return;
+  var total = 0, done = 0;
+  _currentAudit.checklist.forEach(function(op){
+    op.items.forEach(function(it){ total++; if(it.checked) done++; });
+  });
+  var el = document.getElementById('checklistProgress');
+  if (el) el.textContent = done + ' / ' + total + ' steps completed';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Image handling
+// ════════════════════════════════════════════════════════════════════════════
+function _formatKB(bytes) { return Math.round((bytes||0)/1024) + ' KB'; }
+function _dataUrlBytes(d) {
+  if (!d) return 0;
+  var i = d.indexOf(','); var s = i >= 0 ? d.slice(i+1) : d;
+  return Math.floor(s.length * 3/4);
+}
+function compressImage(dataUrl, maxDim, quality) {
+  return new Promise(function(resolve, reject) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var scale = Math.min(1, (maxDim||1000) / Math.max(w, h));
+      var ww = Math.max(1, Math.round(w*scale)), hh = Math.max(1, Math.round(h*scale));
+      var c = document.createElement('canvas'); c.width = ww; c.height = hh;
+      c.getContext('2d').drawImage(img, 0, 0, ww, hh);
+      try { resolve(c.toDataURL('image/jpeg', quality||0.70)); }
+      catch(e) { reject(e); }
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+async function _readAndCompress(file) {
+  if (!/^image\//i.test(file.type)) throw new Error('Pick an image file');
+  var raw = await new Promise(function(res, rej) {
+    var fr = new FileReader(); fr.onload = function(){ res(fr.result); }; fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
+  return await compressImage(raw, 1000, 0.70);
+}
+
+function triggerImagePicker(type, opIdx, stepIdx) {
+  _imgTarget = { type:type, opIdx:opIdx, stepIdx:stepIdx };
+  document.getElementById('sharedImgInput').click();
+}
+async function onSharedImageSelected(event) {
+  var file = event.target.files && event.target.files[0]; if (!file) return;
+  try {
+    var dataUrl = await _readAndCompress(file);
+    if (_imgTarget && _imgTarget.type === 'step') {
+      _currentAudit.checklist[_imgTarget.opIdx].items[_imgTarget.stepIdx].images.push(dataUrl);
+      refreshStepImages(_imgTarget.opIdx, _imgTarget.stepIdx);
+    } else if (_imgTarget && _imgTarget.type === 'overall') {
+      _currentAudit.overallImages.push(dataUrl);
+      renderOverallImages();
+    }
+    toast('Image attached', 'ok');
+  } catch(e) { toast('Image error: ' + e.message, 'err'); }
+  event.target.value = '';
+  _imgTarget = null;
+}
+
+function refreshStepImages(opIdx, stepIdx) {
+  var it = _currentAudit.checklist[opIdx].items[stepIdx];
+  var row = document.getElementById('step-img-row-'+opIdx+'-'+stepIdx);
+  if (!row) return;
+  var imgs = (it.images || []).map(function(img, imgIdx) {
+    return '<div style="display:inline-flex;align-items:center;gap:4px">'
+      + '<img class="img-thumb" src="'+img+'" alt="" onclick="openImageViewer(\''+img+'\',\'Step '+it.num+'\')">'
+      + '<button class="img-remove" onclick="removeStepImage('+opIdx+','+stepIdx+','+imgIdx+')">×</button>'
+      + '</div>';
+  }).join('');
+  // Preserve the add buttons, replace everything before them
+  row.innerHTML = imgs
+    + '<button class="btn btn-secondary btn-xs" onclick="triggerImagePicker(\'step\','+opIdx+','+stepIdx+')">📷 Add photo</button>'
+    + '<button class="btn btn-secondary btn-xs" onclick="openCameraFor(\'step\','+opIdx+','+stepIdx+')">📸 Camera</button>';
+}
+function removeStepImage(opIdx, stepIdx, imgIdx) {
+  _currentAudit.checklist[opIdx].items[stepIdx].images.splice(imgIdx, 1);
+  refreshStepImages(opIdx, stepIdx);
+}
+
+function renderOverallImages() {
+  var grid = document.getElementById('overallImgGrid'); if (!grid) return;
+  var imgs = _currentAudit ? (_currentAudit.overallImages || []) : [];
+  grid.innerHTML = imgs.map(function(img, i) {
+    return '<div class="img-preview-item">'
+      + '<img src="'+img+'" alt="" onclick="openImageViewer(\''+img+'\',\'Overall\')">'
+      + '<button class="rm-btn" onclick="removeOverallImage('+i+')">×</button>'
+      + '</div>';
+  }).join('');
+}
+function removeOverallImage(idx) {
+  _currentAudit.overallImages.splice(idx, 1);
+  renderOverallImages();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Camera (routed by _cameraTarget)
+// ════════════════════════════════════════════════════════════════════════════
+var _camStream = null, _capturedUrl = null;
+
+function openCameraFor(type, opIdx, stepIdx) {
+  _cameraTarget = { type:type, opIdx:opIdx, stepIdx:stepIdx };
+  _openCameraModal();
+}
+async function _openCameraModal() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    toast('Camera not supported in this browser', 'err'); return;
+  }
+  var modal = document.getElementById('cameraModal');
+  modal.classList.add('show'); document.body.style.overflow = 'hidden';
+  document.getElementById('camStage').style.display = '';
+  document.getElementById('camPreviewWrap').style.display = 'none';
+  document.getElementById('captureBtns').style.display = 'flex';
+  document.getElementById('confirmBtns').style.display = 'none';
+  _capturedUrl = null;
+  var status = document.getElementById('camStatus');
+  status.textContent = 'Requesting camera permission…';
+  try {
+    _camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ideal:'environment'} }, audio:false });
+    document.getElementById('camVideo').srcObject = _camStream;
+    status.textContent = 'Live preview — tap 📸 Capture';
+  } catch(e) {
+    var msg = e.name === 'NotAllowedError' ? 'Camera permission denied.' : 'Camera error: ' + (e.message||e);
+    status.textContent = '⚠ ' + msg; toast(msg, 'err');
+  }
+}
+function closeCameraModal() {
+  if (_camStream) { _camStream.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); _camStream = null; }
+  var v = document.getElementById('camVideo'); if (v) v.srcObject = null;
+  document.getElementById('cameraModal').classList.remove('show');
+  document.body.style.overflow = ''; _capturedUrl = null;
+}
+function capturePhoto() {
+  var video = document.getElementById('camVideo');
+  var canvas= document.getElementById('camCanvas');
+  if (!video || !video.videoWidth) { toast('Camera not ready', 'err'); return; }
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  var raw = canvas.toDataURL('image/jpeg', 0.9);
+  compressImage(raw, 1000, 0.70).then(function(url) {
+    _capturedUrl = url;
+    document.getElementById('camStage').style.display      = 'none';
+    document.getElementById('camPreviewWrap').style.display= '';
+    document.getElementById('camPreviewImg').src           = url;
+    document.getElementById('captureBtns').style.display   = 'none';
+    document.getElementById('confirmBtns').style.display   = 'flex';
+    document.getElementById('camStatus').textContent = '~' + _formatKB(_dataUrlBytes(url)) + ' — accept or retake';
+  }).catch(function(e){ _capturedUrl = raw; });
+}
+function retakePhoto() {
+  _capturedUrl = null;
+  document.getElementById('camStage').style.display      = '';
+  document.getElementById('camPreviewWrap').style.display= 'none';
+  document.getElementById('captureBtns').style.display   = 'flex';
+  document.getElementById('confirmBtns').style.display   = 'none';
+  document.getElementById('camStatus').textContent = 'Live preview — tap 📸 Capture';
+}
+function acceptPhoto() {
+  if (!_capturedUrl) return;
+  var url = _capturedUrl;
+  if (_cameraTarget && _cameraTarget.type === 'step') {
+    _currentAudit.checklist[_cameraTarget.opIdx].items[_cameraTarget.stepIdx].images.push(url);
+    refreshStepImages(_cameraTarget.opIdx, _cameraTarget.stepIdx);
+  } else {
+    if (!_currentAudit.overallImages) _currentAudit.overallImages = [];
+    _currentAudit.overallImages.push(url);
+    renderOverallImages();
+  }
+  closeCameraModal();
+  toast('Photo attached', 'ok');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Image viewer
+// ════════════════════════════════════════════════════════════════════════════
+function openImageViewer(dataUrl, title) {
+  document.getElementById('viewerImg').src = dataUrl;
+  document.getElementById('imageViewerTitle').textContent = title || 'Image';
+  document.getElementById('imageViewerModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeImageViewer() {
+  document.getElementById('imageViewerModal').classList.remove('show');
+  document.body.style.overflow = '';
+  document.getElementById('viewerImg').src = '';
+}
+window.openImageViewer = openImageViewer; // make accessible from inline HTML
+
+// ════════════════════════════════════════════════════════════════════════════
+// ExcelJS — load lazily for image-embedded exports
+// ════════════════════════════════════════════════════════════════════════════
+async function ensureExcelJS() {
+  if (window.ExcelJS) return;
+  await new Promise(function(resolve, reject) {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    s.onload = resolve;
+    s.onerror = function() { reject(new Error('Could not load ExcelJS — check internet connection.')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function ensureJSZip() {
+  if (window.JSZip) return;
+  await new Promise(function(resolve, reject) {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload = resolve;
+    s.onerror = function() { reject(new Error('Could not load JSZip — internet connection required.')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function buildAuditXlsx(audit) {
+  await ensureExcelJS();
+  var wb = new ExcelJS.Workbook();
+  wb.creator = 'PM Audit';
+  var ws = wb.addWorksheet('PM Audit');
+
+  ws.columns = [
+    { width: 10 },  // A: Step
+    { width: 54 },  // B: Description
+    { width: 36 },  // C: Reference Notes
+    { width: 11 },  // D: Done?
+    { width: 42 },  // E: Tech Notes
+    { width: 22 },  // F: Image 1
+    { width: 22 },  // G: Image 2
+    { width: 22 },  // H: Image 3
+  ];
+
+  function fillCell(cell, argb) {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } };
+  }
+  function applyFill(row, argb) {
+    row.eachCell({ includeEmpty: true }, function(cell) { fillCell(cell, argb); });
+  }
+
+  // ── Title row ─────────────────────────────────────────────────────────
+  var t = ws.addRow(['PM AUDIT REPORT']);
+  t.height = 28;
+  ws.mergeCells('A1:H1');
+  t.getCell(1).font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
+  t.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+  fillCell(t.getCell(1), 'FF1e2744');
+
+  // ── Info section ──────────────────────────────────────────────────────
+  function infoRow(pairs) { // pairs = [[label, value], ...]
+    var vals = [];
+    pairs.forEach(function(p){ vals.push(p[0], p[1]); });
+    var row = ws.addRow(vals);
+    row.height = 16;
+    for (var i = 0; i < pairs.length; i++) {
+      var lc = row.getCell(i * 2 + 1);
+      var vc = row.getCell(i * 2 + 2);
+      lc.font = { bold: true, size: 9, color: { argb: 'FF607090' } };
+      fillCell(lc, 'FFF0F3FA');
+      vc.font = { bold: true, size: 10 };
+      fillCell(vc, 'FFFAFAFF');
+    }
+    return row;
+  }
+  infoRow([['AUDITOR', audit.auditorName||''], ['SHIFT', audit.shift||''], ['AUDIT DATE', audit.auditDate||'']]);
+  infoRow([['ORDER', audit.order||''], ['WORK CENTER', audit.wc||''], ['AUDIT STATUS', audit.auditStatus||'']]);
+  var dr = ws.addRow(['DESCRIPTION', audit.desc||'']);
+  dr.getCell(1).font = { bold: true, size: 9, color: { argb: 'FF607090' } };
+  fillCell(dr.getCell(1), 'FFF0F3FA'); ws.mergeCells('B'+dr.number+':H'+dr.number);
+  infoRow([['FUNCTIONAL LOC.', audit.fl||''], ['DUE DATE', audit.basicFinishDate||''], ['CLOSED DATE', audit.finishDate||'']]);
+  infoRow([['TECHNICIAN', audit.tech||''], ['INSPECTOR', audit.inspector||''], ['PDF REFERENCE', audit.pdfFile||'']]);
+  ws.addRow([]);
+
+  // ── Checklist ─────────────────────────────────────────────────────────
+  var totalSteps = 0, doneSteps = 0;
+
+  for (var oi = 0; oi < (audit.checklist||[]).length; oi++) {
+    var op = audit.checklist[oi];
+    var isOk  = op.status === 'ok';
+    var isNok = op.status === 'nok';
+    var opBg  = isOk ? 'FF0d2b1a' : isNok ? 'FF2b0d0d' : 'FF1e2744';
+    var opFg  = isOk ? 'FF6ee7b7' : isNok ? 'FFfca5a5' : 'FFa5b4fc';
+    var verdict = isOk ? '  ✓ OK' : isNok ? '  ✗ NOK' : '';
+
+    var opR = ws.addRow(['Op ' + op.opNum + '  ' + op.opTitle + verdict]);
+    opR.height = 20;
+    ws.mergeCells('A'+opR.number+':H'+opR.number);
+    opR.getCell(1).font = { bold: true, size: 11, color: { argb: opFg } };
+    opR.getCell(1).alignment = { vertical: 'middle' };
+    fillCell(opR.getCell(1), opBg);
+
+    var hdr = ws.addRow(['Step', 'Task Description', 'Reference Notes', 'Done?', 'Notes / Findings', 'Images']);
+    hdr.height = 15;
+    hdr.font = { bold: true, size: 9, color: { argb: 'FF3a4060' } };
+    applyFill(hdr, 'FFdde2f0');
+    hdr.eachCell({ includeEmpty: true }, function(c) {
+      c.border = { bottom: { style: 'thin', color: { argb: 'FFa0aac0' } } };
+      c.alignment = { vertical: 'middle' };
+    });
+
+    for (var ii = 0; ii < op.items.length; ii++) {
+      var it = op.items[ii];
+      totalSteps++;
+      if (it.checked) doneSteps++;
+
+      var hasImg = it.images && it.images.length > 0;
+      var rowH = hasImg ? 80 : 16;
+      var sr = ws.addRow([
+        it.num + '.',
+        it.text,
+        (it.notes||[]).join(' | '),
+        it.checked ? '✓ YES' : 'NO',
+        it.comment || ''
+      ]);
+      sr.height = rowH;
+      sr.getCell(1).font = { bold: true, size: 10, color: { argb: 'FF6366f1' } };
+      sr.getCell(4).font = { bold: true, color: { argb: it.checked ? 'FF059669' : 'FFef4444' } };
+      var rowBg = it.checked ? 'FFf0fdf5' : 'FFffffff';
+      sr.eachCell({ includeEmpty: true }, function(c) {
+        fillCell(c, rowBg);
+        c.border = { bottom: { style: 'hair', color: { argb: 'FFd8deee' } } };
+        c.alignment = { vertical: 'top', wrapText: true };
+      });
+
+      // Embed images for this step
+      if (hasImg) {
+        for (var imgI = 0; imgI < it.images.length && imgI < 3; imgI++) {
+          try {
+            var du = it.images[imgI];
+            var ext = du.startsWith('data:image/png') ? 'png' : 'jpeg';
+            var imgId = wb.addImage({ base64: du.split(',')[1], extension: ext });
+            ws.addImage(imgId, {
+              tl: { col: 5 + imgI, row: sr.number - 1 },
+              ext: { width: 130, height: 72 }
+            });
+          } catch(e) { console.warn('step img embed:', e); }
+        }
+      }
+    }
+    ws.addRow([]);
+  }
+
+  // ── Summary ────────────────────────────────────────────────────────────
+  var sh = ws.addRow(['COMPLETION SUMMARY']);
+  sh.font = { bold: true, size: 11, color: { argb: 'FF1e2744' } };
+  ws.addRow(['Steps completed:', doneSteps + ' / ' + totalSteps,
+    '', 'Completion:', totalSteps > 0 ? Math.round(doneSteps/totalSteps*100) + '%' : 'N/A']);
+  ws.addRow([]);
+
+  // ── Overall notes ──────────────────────────────────────────────────────
+  var nh = ws.addRow(['OVERALL NOTES & OBSERVATIONS']);
+  nh.font = { bold: true, size: 11, color: { argb: 'FF1e2744' } };
+  ws.mergeCells('A'+nh.number+':H'+nh.number);
+  var nr = ws.addRow([audit.overallNotes || '(none)']);
+  nr.height = Math.max(50, Math.min(120, ((audit.overallNotes||'').length / 60 + 1) * 16));
+  ws.mergeCells('A'+nr.number+':H'+nr.number);
+  nr.getCell(1).alignment = { wrapText: true, vertical: 'top' };
+
+  // ── Overall images ─────────────────────────────────────────────────────
+  if (audit.overallImages && audit.overallImages.length > 0) {
+    ws.addRow([]);
+    var oh = ws.addRow(['OVERALL IMAGES']);
+    oh.font = { bold: true, size: 11, color: { argb: 'FF1e2744' } };
+    var oImgRow = ws.addRow(['']);
+    oImgRow.height = 150;
+    for (var oi2 = 0; oi2 < audit.overallImages.length; oi2++) {
+      try {
+        var du2 = audit.overallImages[oi2];
+        var ext2 = du2.startsWith('data:image/png') ? 'png' : 'jpeg';
+        var imgId2 = wb.addImage({ base64: du2.split(',')[1], extension: ext2 });
+        ws.addImage(imgId2, {
+          tl: { col: oi2 * 2, row: oImgRow.number - 1 },
+          ext: { width: 155, height: 142 }
+        });
+      } catch(e) { console.warn('overall img embed:', e); }
+    }
+  }
+
+  return wb;
+}
+
+async function _downloadBlob(blob, fname) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); document.body.removeChild(a); }, 300);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Save draft / Submit
+// ════════════════════════════════════════════════════════════════════════════
+function _mergeCurrentAuditToState() {
+  if (!_currentAudit) return;
+  _currentAudit.overallNotes = document.getElementById('overallNotes').value || '';
+  _currentAudit.auditorName  = state.auditorName;
+  _currentAudit.shift        = state.shift;
+  var idx = (state.audits || []).findIndex(function(a){ return a.id === _currentAudit.id; });
+  if (idx >= 0) state.audits[idx] = JSON.parse(JSON.stringify(_currentAudit));
+  else { if (!state.audits) state.audits = []; state.audits.push(JSON.parse(JSON.stringify(_currentAudit))); }
+}
+
+async function saveAuditDraft() {
+  if (!_currentAudit) return;
+  _currentAudit.auditStatus = 'Draft';
+  _mergeCurrentAuditToState();
+  saveState();
+  renderPMList();
+  // Optionally write a JSON file to folder
+  if (_auditDirHandle && await _verifyPerm(_auditDirHandle, true)) {
+    try {
+      var fname = 'PMaudit_draft_' + _safeName(_currentAudit.order) + '_' + _currentAudit.auditDate + '.json';
+      var fh = await _auditDirHandle.getFileHandle(fname, { create:true });
+      var w  = await fh.createWritable();
+      await w.write(JSON.stringify(_currentAudit, null, 2));
+      await w.close();
+      toast('Draft saved to folder: ' + fname, 'ok');
+    } catch(e) {
+      toast('Draft saved locally (folder write failed: ' + e.message + ')', 'ok');
+    }
+  } else {
+    toast('Draft saved', 'ok');
+  }
+  // Refresh status badge
+  var badgeEl = document.getElementById('auditStatusBadge');
+  if (badgeEl) badgeEl.innerHTML = '<span class="status-badge badge-draft">Draft</span>';
+}
+
+async function submitAudit() {
+  if (!_currentAudit) return;
+  if (!_currentAudit.checklist || !_currentAudit.checklist.length) {
+    toast('Build the checklist first before submitting', 'err'); return;
+  }
+  if (!state.auditorName) { toast('Enter your name in the login to submit', 'err'); return; }
+
+  // ── Validate: every operation must have OK or NOK ──
+  var incomplete = _currentAudit.checklist.filter(function(op){ return op.status !== 'ok' && op.status !== 'nok'; });
+
+  // Clear previous highlights
+  document.querySelectorAll('.op-section.op-needs-verdict').forEach(function(el){ el.classList.remove('op-needs-verdict'); });
+
+  if (incomplete.length) {
+    // Highlight incomplete operations
+    incomplete.forEach(function(op, i) {
+      var el = document.getElementById('op-sec-' + _currentAudit.checklist.indexOf(op));
+      if (el) el.classList.add('op-needs-verdict');
+    });
+
+    // Show validation banner
+    var banner = document.getElementById('submitValidationErr');
+    var list   = document.getElementById('submitValidationList');
+    list.innerHTML = incomplete.map(function(op) {
+      return '<li><strong>Operation ' + esc(op.opNum) + '</strong>' + (op.opTitle ? ' — ' + esc(op.opTitle) : '') + '</li>';
+    }).join('');
+    banner.style.display = '';
+
+    // Scroll to first incomplete op
+    var firstEl = document.getElementById('op-sec-' + _currentAudit.checklist.indexOf(incomplete[0]));
+    if (firstEl) firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  // All good — hide any previous validation banner
+  document.getElementById('submitValidationErr').style.display = 'none';
+
+  if (!confirm('Submit this audit and export to XLSX?')) return;
+
+  _currentAudit.overallNotes = document.getElementById('overallNotes').value || '';
+  _currentAudit.auditStatus  = 'Submitted';
+  _currentAudit.submittedAt  = new Date().toISOString();
+  _currentAudit.auditorName  = state.auditorName;
+  _currentAudit.shift        = state.shift;
+  _mergeCurrentAuditToState();
+  saveState();
+  renderPMList();
+
+  var fname = 'PMaudit_' + _safeName(_currentAudit.order) + '_' + _currentAudit.auditDate + '_' + _safeName(state.auditorName) + '.xlsx';
+  try {
+    toast('Building report with images…');
+    var wb = await buildAuditXlsx(_currentAudit);
+    var buffer = await wb.xlsx.writeBuffer();
+    var blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    var saved = await saveFileAs(blob, fname);
+    if (saved) toast('Submitted — report saved: ' + fname, 'ok');
+  } catch(e) {
+    console.error(e);
+    toast('Export failed: ' + e.message, 'err');
+  }
+
+  var badgeEl = document.getElementById('auditStatusBadge');
+  if (badgeEl) badgeEl.innerHTML = '<span class="status-badge badge-submitted">Submitted</span>';
+}
+
+function _safeName(s) { return String(s||'').replace(/[^A-Za-z0-9_\-]/g,'_'); }
+
+// (buildAuditXlsx replaced the old buildAuditWorkbook — see ExcelJS section above)
+
+// ════════════════════════════════════════════════════════════════════════════
+// Export tab
+// ════════════════════════════════════════════════════════════════════════════
+function renderExportList() {
+  var audits = state.audits || [];
+  document.getElementById('cntExport').textContent = audits.length;
+  var el = document.getElementById('exportList');
+  if (!audits.length) {
+    el.innerHTML = '<div class="empty">No audits saved yet.</div>';
+    return;
+  }
+  el.innerHTML = audits.slice().reverse().map(function(a) {
+    var badge = '<span class="status-badge '+(a.auditStatus==='Submitted'?'badge-submitted':'badge-draft')+'">'+a.auditStatus+'</span>';
+    var total = 0, done = 0;
+    (a.checklist||[]).forEach(function(op){op.items.forEach(function(it){total++;if(it.checked)done++;});});
+    return '<div class="audit-card">'
+      + '<div class="audit-card-info">'
+      +   '<div class="audit-card-title">Order '+esc(a.order)+' — '+esc(a.desc.slice(0,60))+'</div>'
+      +   '<div class="audit-card-meta">'+badge+' &nbsp;'+esc(a.auditDate)+' &nbsp;·&nbsp; Auditor: '+esc(a.auditorName)
+      +     ' &nbsp;·&nbsp; Checklist: '+done+'/'+total+' steps'
+      +     (a.pdfFile ? ' &nbsp;·&nbsp; PDF: '+esc(a.pdfFile) : '')
+      +   '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +   '<button class="btn btn-secondary btn-small" onclick="reExport(\''+esc(a.id)+'\')">📤 Re-export</button>'
+      +   '<button class="btn btn-secondary btn-small" onclick="editAuditById(\''+esc(a.id)+'\')">✏ Edit</button>'
+      +   '<button class="btn btn-danger btn-small" onclick="deleteAudit(\''+esc(a.id)+'\')">🗑</button>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+async function reExport(id) {
+  var a = (state.audits||[]).find(function(x){ return x.id === id; });
+  if (!a) return;
+  var fname = 'PMaudit_' + _safeName(a.order) + '_' + a.auditDate + '_' + _safeName(a.auditorName||'unknown') + '.xlsx';
+  try {
+    toast('Building report with images…');
+    var wb = await buildAuditXlsx(a);
+    var buffer = await wb.xlsx.writeBuffer();
+    var blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var saved = await saveFileAs(blob, fname);
+    if (saved) toast('Exported: ' + fname, 'ok');
+  } catch(e) {
+    console.error(e);
+    toast('Export failed: ' + e.message, 'err');
+  }
+}
+function editAuditById(id) {
+  var a = (state.audits||[]).find(function(x){ return x.id === id; });
+  if (!a) return;
+  // Make sure PM is in the imported list
+  if (!state.importedPMs.find(function(p){ return p.order === a.order; })) {
+    toast('This PM order is not in the currently imported list. Import the XLSX first.', 'err');
+    return;
+  }
+  switchTab('audits');
+  startAudit(a.order);
+}
+function deleteAudit(id) {
+  if (!confirm('Delete this audit? This cannot be undone.')) return;
+  state.audits = (state.audits||[]).filter(function(a){ return a.id !== id; });
+  saveState();
+  renderExportList();
+  toast('Deleted', 'ok');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Backup / Restore / Reset
+// ════════════════════════════════════════════════════════════════════════════
+function backupData() {
+  var blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url;
+  a.download = 'PMaudit_backup_' + todayIso() + '.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); document.body.removeChild(a); }, 200);
+}
+function restoreData(evt) {
+  var f = evt.target.files && evt.target.files[0]; if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function() {
+    try {
+      var p = JSON.parse(reader.result);
+      if (!p || typeof p !== 'object') throw new Error('Invalid backup file');
+      if (!confirm('Replace ALL current data with this backup?')) return;
+      Object.assign(state, p);
+      saveState();
+      document.getElementById('auditorName').value = state.auditorName || '';
+      document.getElementById('shiftSel').value    = state.shift || '1st shift';
+      renderPMList();
+      renderExportList();
+      toast('Restored from backup', 'ok');
+    } catch(e) { toast('Restore failed: ' + e.message, 'err'); }
+  };
+  reader.readAsText(f);
+  evt.target.value = '';
+}
+function resetAll() {
+  if (!confirm('Clear ALL audit data? This cannot be undone.')) return;
+  if (!confirm('Are you sure? Consider downloading a backup first.')) return;
+  localStorage.removeItem(SK);
+  location.reload();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PM Source auto-load
+// ════════════════════════════════════════════════════════════════════════════
+async function autoLoadPmFromFolder(filename) {
+  if (!filename || !_auditDirHandle) return false;
+  try {
+    var fh   = await _auditDirHandle.getFileHandle(filename, { create: false });
+    var file = await fh.getFile();
+    var buf  = await file.arrayBuffer();
+    var wb   = XLSX.read(buf, { type: 'array', cellDates: true });
+    var pms  = parseWorkbook(wb);
+    if (!pms.length) return false;
+    state.importedPMs      = pms;
+    state.importedFileName = filename;
+    state.pmSourceLastLoad = new Date().toISOString();
+    saveState();
+    renderPMList();
+    return true;
+  } catch(e) {
+    console.warn('PM auto-load failed:', e);
+    return false;
+  }
+}
+
+async function refreshPmSourceList() {
+  var sel = document.getElementById('pmSourceSel');
+  var st  = document.getElementById('pmSourceSettingsStatus');
+  if (!sel) return;
+  if (!await _ensureDirHandle()) {
+    if (st) st.textContent = '⚠ Link the audit folder first (above).';
+    toast('Link the audit folder in Settings first', 'err');
+    return;
+  }
+  var files = [];
+  try {
+    for await (var entry of _auditDirHandle.values()) {
+      if (entry.kind === 'file' && /\.(xlsx|xls)$/i.test(entry.name) && !entry.name.startsWith('~$'))
+        files.push(entry.name);
+    }
+  } catch(e) {}
+  files.sort();
+  sel.innerHTML = '<option value="">-- select xlsx --</option>'
+    + files.map(function(fn){
+        return '<option value="'+esc(fn)+'"'+(fn === state.pmSourceFile ? ' selected' : '')+'>'+esc(fn)+'</option>';
+      }).join('');
+  if (st) st.textContent = files.length ? files.length + ' xlsx file(s) found in folder.' : 'No xlsx files found in the audit folder.';
+}
+
+async function setPmSourceFile(filename) {
+  state.pmSourceFile = filename;
+  saveState();
+  var st = document.getElementById('pmSourceSettingsStatus');
+  if (!filename) { if (st) st.textContent = ''; return; }
+  if (st) st.textContent = 'Loading…';
+  var ok = await autoLoadPmFromFolder(filename);
+  if (st) st.textContent = ok
+    ? '✓ Loaded ' + state.importedPMs.length + ' PMs from ' + filename
+    : '⚠ Could not read file. Make sure the audit folder is linked.';
+}
+
+async function reloadPmSource() {
+  if (!state.pmSourceFile) { toast('Set a PM source file in Settings first', 'err'); return; }
+  toast('Reloading PM list…');
+  var ok = await autoLoadPmFromFolder(state.pmSourceFile);
+  toast(ok ? '✓ PM list refreshed — ' + state.importedPMs.length + ' entries' : '⚠ Could not reload — check folder link', ok ? 'ok' : 'err');
+}
+
+function renderPmSourceStatus() {
+  var el = document.getElementById('pmSourceStatus');
+  if (!el) return;
+  if (state.pmSourceFile && state.pmSourceLastLoad) {
+    var d = new Date(state.pmSourceLastLoad);
+    el.textContent = '↺ Auto-loaded from ' + state.pmSourceFile + ' at ' + d.toLocaleTimeString();
+  } else if (state.pmSourceFile) {
+    el.textContent = 'Source: ' + state.pmSourceFile;
+  } else {
+    el.textContent = '';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Save As dialog — always shows options: native picker OR download
+// ════════════════════════════════════════════════════════════════════════════
+var _saveDlgResolve = null;
+
+async function saveFileAs(blob, suggestedName) {
+  var choice = await _showSaveDlg(suggestedName);
+  if (choice === 'cancel') return false;
+
+  if (choice === 'picker' && window.showSaveFilePicker) {
+    try {
+      var fh = await window.showSaveFilePicker({
+        suggestedName: suggestedName,
+        types: [{ description: 'Excel Spreadsheet',
+                  accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }]
+      });
+      var w = await fh.createWritable();
+      await w.write(blob);
+      await w.close();
+      return true;
+    } catch(e) {
+      if (e && e.name === 'AbortError') return false;
+      // Picker failed — fall through to download
+      toast('Save As failed, downloading instead…', 'err');
+    }
+  }
+
+  // Download to default Downloads folder
+  await _downloadBlob(blob, suggestedName);
+  return true;
+}
+
+function _showSaveDlg(filename) {
+  return new Promise(function(resolve) {
+    _saveDlgResolve = function(val) {
+      _saveDlgResolve = null;
+      document.getElementById('saveModal').classList.remove('show');
+      document.body.style.overflow = '';
+      resolve(val);
+    };
+    document.getElementById('saveDlgFilename').textContent = filename;
+    // Grey out "Save As" button when API not supported
+    var pickerBtn = document.getElementById('saveDlgPickerBtn');
+    var hasPicker = !!window.showSaveFilePicker;
+    pickerBtn.disabled = !hasPicker;
+    pickerBtn.style.opacity = hasPicker ? '' : '0.45';
+    document.getElementById('saveDlgNote').textContent = hasPicker
+      ? ''
+      : '⚠ "Save As" requires Chrome or Edge. Use Download instead.';
+    document.getElementById('saveModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PDF Debug modal
+// ════════════════════════════════════════════════════════════════════════════
+function openPdfDebugModal(text) {
+  document.getElementById('pdfDebugText').value = text || '(no text extracted)';
+  document.getElementById('pdfDebugModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closePdfDebugModal() {
+  document.getElementById('pdfDebugModal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+function copyPdfDebugText() {
+  var el = document.getElementById('pdfDebugText');
+  el.select();
+  try {
+    document.execCommand('copy');
+    toast('Text copied to clipboard', 'ok');
+  } catch(e) {
+    toast('Select the text manually then press Ctrl+C', 'err');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Login
+// ════════════════════════════════════════════════════════════════════════════
+function showLoginScreen() {
+  // Pre-fill from saved state
+  document.getElementById('loginUser').value  = state.auditorName || '';
+  document.getElementById('loginShift').value = state.shift || '1st shift';
+  document.getElementById('loginTitle').value = state.userTitle || '';
+  document.getElementById('loginEmail').value = state.userEmail || '';
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('hdrUserBadge').style.display = 'none';
+  setTimeout(function(){
+    var f = document.getElementById('loginUser');
+    if (f && !f.value) f.focus();
+    else document.getElementById('loginEmail').focus();
+  }, 80);
+}
+
+function doLogin() {
+  var user  = document.getElementById('loginUser').value.trim();
+  var shift = document.getElementById('loginShift').value;
+  var title = document.getElementById('loginTitle').value.trim();
+  var email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  var errEl = document.getElementById('loginError');
+
+  errEl.style.display = 'none';
+
+  if (!user)  { errEl.textContent = 'Please enter your name.';       errEl.style.display=''; return; }
+  if (!title) { errEl.textContent = 'Please enter your title/role.'; errEl.style.display=''; return; }
+  if (!email) { errEl.textContent = 'Please enter your email.';      errEl.style.display=''; return; }
+  if (!email.endsWith('@mercedes-benz.com')) {
+    errEl.textContent = '⛔ User not authorized. Email must end with @mercedes-benz.com';
+    errEl.style.display = '';
+    return;
+  }
+
+  state.auditorName = user;
+  state.shift       = shift;
+  state.userTitle   = title;
+  state.userEmail   = email;
+  document.getElementById('auditorName').value = user;
+  document.getElementById('shiftSel').value    = shift;
+  saveState();
+
+  document.getElementById('hdrUserName').textContent = user + (title ? ' · ' + title : '');
+  document.getElementById('hdrUserMeta').textContent = shift + ' · ' + email;
+  document.getElementById('hdrUserBadge').style.display = 'flex';
+  document.getElementById('loginScreen').style.display = 'none';
+  _postLoginInit();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Init
+// ════════════════════════════════════════════════════════════════════════════
+async function _postLoginInit() {
+  renderPMList();
+  renderFolderCard();
+  switchTab(state.currentTab || 'audits');
+
+  try {
+    var h = await _idbGet('auditDir');
+    if (h) {
+      _auditDirHandle = h;
+      var p = await h.queryPermission({ mode:'read' });
+      if (p === 'granted') {
+        await loadAvailablePdfs();
+        if (state.pmSourceFile) {
+          var ok = await autoLoadPmFromFolder(state.pmSourceFile);
+          if (ok) toast('PM list refreshed from ' + state.pmSourceFile, 'ok');
+        }
+      }
+    }
+  } catch(e) { console.warn('folder restore', e); }
+
+  // Show first-run setup if Brain is empty
+  checkFirstRun();
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  loadState();
+  loadBrain();
+
+  // Login form submit — wired here (not inline) so it works under strict CSP
+  document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    doLogin();
+  });
+
+  // Keyboard: Escape closes modals
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('cameraModal').classList.contains('show'))      { closeCameraModal();     return; }
+    if (document.getElementById('imageViewerModal').classList.contains('show')) { closeImageViewer();     return; }
+    if (document.getElementById('pdfDebugModal').classList.contains('show'))    { closePdfDebugModal();   return; }
+    if (document.getElementById('saveModal').classList.contains('show'))        { _saveDlgResolve && _saveDlgResolve('cancel'); return; }
+  });
+
+  // Hide folder section in onboarding if browser doesn't support directory picker
+  if (typeof window.showDirectoryPicker !== 'function') {
+    var fs = document.getElementById('onboardFolderSection');
+    if (fs) fs.style.display = 'none';
+  }
+
+  // Always show login screen on every page load
+  showLoginScreen();
+});
+</script>
+</body>
+</html>
